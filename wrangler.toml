@@ -1,0 +1,29 @@
+name = "pethealth"
+main = "workers/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+# Environment variables - set these via wrangler secret put or in Cloudflare dashboard
+# Example: wrangler secret put DATABASE_URL
+# Or use vars for non-sensitive values:
+# vars = { DATABASE_URL = "your-database-url" }
+
+# For sensitive values, use: wrangler secret put <KEY>
+# Required secrets:
+# - DATABASE_URL
+# - JWT_SECRET
+# - VITE_APP_ID
+# - OAUTH_SERVER_URL
+# - STRIPE_SECRET_KEY
+# - STRIPE_WEBHOOK_SECRET
+# - STRIPE_PUBLISHABLE_KEY
+# - S3_BUCKET
+# - S3_REGION
+# - S3_ACCESS_KEY_ID
+# - S3_SECRET_ACCESS_KEY
+
+# Don't use custom build - we'll build manually before deploy
+# [build]
+# command = "npm run build:workers"
+# no_bundle = true
