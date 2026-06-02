@@ -2,9 +2,19 @@ import Stripe from "stripe";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 
-// Initialize Stripe with the secret key
-export const stripe = new Stripe(ENV.stripeSecretKey || "", {
-  apiVersion: "2024-06-20",
+// Lazy Stripe singleton — avoids crashing at module-load time when STRIPE_SECRET_KEY is not set
+let _stripe: Stripe | null = null;
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = ENV.stripeSecretKey;
+    if (!key) throw new Error("STRIPE_SECRET_KEY is not configured");
+    _stripe = new Stripe(key, { apiVersion: "2024-06-20" });
+  }
+  return _stripe;
+}
+/** @deprecated Use getStripe() for lazy initialization */
+export const stripe = new Proxy({} as Stripe, {
+  get(_, prop) { return (getStripe() as any)[prop]; },
 });
 
 // Price IDs for subscription tiers (in production, these would be created in Stripe Dashboard)
@@ -45,7 +55,7 @@ export async function createCheckoutSession(
     customerId = customer.id;
 
     // Update user with Stripe customer ID
-    await db.updateUser(userId, { stripeCustomerId: customerId });
+    await db.upsertUser({ id: userId, stripeCustomerId: customerId } as any);
   }
 
   // Create a checkout session

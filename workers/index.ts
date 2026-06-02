@@ -4,7 +4,15 @@ import { createWorkersContext } from "../server/_core/workers-context";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 import * as db from "../server/db";
 import { sdk } from "../server/_core/sdk";
-import { handleStripeWebhook } from "../server/stripe";
+// Lazy import — avoids Stripe SDK crash when STRIPE_SECRET_KEY is not set
+let _handleStripeWebhook: typeof import("../server/stripe").handleStripeWebhook | null = null;
+async function getStripeWebhookHandler() {
+  if (!_handleStripeWebhook) {
+    const mod = await import("../server/stripe");
+    _handleStripeWebhook = mod.handleStripeWebhook;
+  }
+  return _handleStripeWebhook;
+}
 
 export default {
   async fetch(request: Request, env: any, ctx: ExecutionContext): Promise<Response> {
@@ -130,6 +138,7 @@ async function handleStripeWebhookRequest(request: Request, env: any): Promise<R
       );
     }
 
+    const handleStripeWebhook = await getStripeWebhookHandler();
     await handleStripeWebhook(body, signature);
 
     return new Response(JSON.stringify({ received: true }), {
