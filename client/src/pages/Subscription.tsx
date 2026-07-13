@@ -16,12 +16,14 @@ import { Check, Crown, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
+import { useI18n } from "@/contexts/I18nContext";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
 const stripePromise = loadStripe(process.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
 
 export default function Subscription() {
+  const { t, lang } = useI18n();
   const { data: subscription, isLoading } = trpc.subscription.get.useQuery();
   const utils = trpc.useUtils();
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly">(
@@ -72,7 +74,7 @@ export default function Subscription() {
     // Check if the user was redirected back from Stripe
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("success") === "true") {
-      toast.success("ยินดีต้อนรับสู่แผน Premium! ขอบคุณที่สมัครสมาชิก");
+      toast.success(t.subscription.alreadyPremium);
 
       // Update the URL to remove the success parameter
       window.history.replaceState({}, "", window.location.pathname);
@@ -103,9 +105,9 @@ export default function Subscription() {
       <DashboardLayout>
         <div className="container mx-auto py-6 space-y-8">
           <div>
-            <h1 className="text-3xl font-bold">แผนการสมัครสมาชิก</h1>
+            <h1 className="text-3xl font-bold">{t.subscription.title}</h1>
             <p className="text-muted-foreground mt-1">
-              เลือกแผนที่เหมาะสมกับความต้องการของคุณ
+              {lang === 'th' ? 'เลือกแผนที่เหมาะสมกับความต้องการของคุณ' : 'Choose the plan that fits your needs'}
             </p>
           </div>
 
@@ -116,12 +118,12 @@ export default function Subscription() {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       {isPremium && <Crown className="h-5 w-5 text-primary" />}
-                      แผนปัจจุบัน: {tier === "free" ? "ฟรี" : "พรีเมียม"}
+                      {t.subscription.currentPlan}: {tier === "free" ? t.subscription.free : t.subscription.premium}
                     </CardTitle>
                     <CardDescription>
                       {isPremium
-                        ? "คุณมีสิทธิเข้าถึงฟีเจอร์พรีเมียมทั้งหมด"
-                        : "อัพเกรดเพื่อปลดล็อคฟีเจอร์ทั้งหมด"}
+                        ? t.subscription.alreadyPremium
+                        : (lang === 'th' ? 'อัพเกรดเพื่อปลดล็อคฟีเจอร์ทั้งหมด' : 'Upgrade to unlock all features')}
                     </CardDescription>
                   </div>
                   {isPremium && (
@@ -137,7 +139,7 @@ export default function Subscription() {
                       {createCustomerPortalSessionMutation.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
-                        "จัดการการสมัครสมาชิก"
+                        <>{t.subscription.managePlan}</>
                       )}
                     </Button>
                   )}
@@ -150,62 +152,62 @@ export default function Subscription() {
             <Card className={tier === "free" ? "border-primary" : ""}>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-2xl">ฟรี</CardTitle>
+                  <CardTitle className="text-2xl">{t.subscription.free}</CardTitle>
                   {tier === "free" && (
-                    <Badge variant="default">แผนปัจจุบัน</Badge>
+                    <Badge variant="default">{t.subscription.currentPlan}</Badge>
                   )}
                 </div>
                 <CardDescription>
-                  เหมาะสำหรับการลองใช้งาน PetHealth
+                  {lang === 'th' ? 'เหมาะสำหรับการลองใช้งาน PetHealth' : 'Great for trying PetHealth'}
                 </CardDescription>
                 <div className="mt-4">
                   <span className="text-4xl font-bold">฿0</span>
-                  <span className="text-muted-foreground">/เดือน</span>
+                  <span className="text-muted-foreground">/{lang === 'th' ? 'เดือน' : 'month'}</span>
                 </div>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-green-500" />
-                    <span>สัตว์เลี้ยง 1 ตัว</span>
+                    <span>{t.subscription.feature1Free}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-green-500" />
-                    <span>บันทึกสุขภาพ 10 รายการ/เดือน</span>
+                    <span>{t.subscription.feature2Free}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-green-500" />
-                    <span>บันทึกพฤติกรรม 5 รายการ/เดือน</span>
+                    <span>{t.subscription.feature3Free}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-green-500" />
-                    <span>ติดตามวัคซีนและน้ำหนัก</span>
+                    <span>{lang === 'th' ? 'ติดตามวัคซีนและน้ำหนัก' : 'Vaccination & weight tracking'}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-green-500" />
-                    <span>ตารางให้อาหาร</span>
+                    <span>{t.feedingSchedule.title}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-green-500" />
-                    <span>บันทึกยาและกิจกรรมรายวัน</span>
+                    <span>{lang === 'th' ? 'บันทึกยาและกิจกรรมรายวัน' : 'Medication & activity logs'}</span>
                   </li>
                   <Separator className="my-3" />
                   <li className="flex items-center gap-2">
                     <X className="h-5 w-5 text-muted-foreground" />
-                    <span>สัตว์เลี้ยงไม่จำกัด</span>
+                    <span>{t.subscription.feature1Premium}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <X className="h-5 w-5 text-muted-foreground" />
-                    <span>ติดตามค่าใช้จ่าย</span>
+                    <span>{t.subscription.feature4Premium}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <X className="h-5 w-5 text-muted-foreground" />
-                    <span>ดูแลสัตว์ป่วย</span>
+                    <span>{t.subscription.feature5Premium}</span>
                   </li>
                 </ul>
                 {tier === "free" && (
                   <Button className="w-full mt-6" disabled variant="outline">
-                    แผนปัจจุบัน
+                    {t.subscription.currentPlan}
                   </Button>
                 )}
               </CardContent>
@@ -220,18 +222,18 @@ export default function Subscription() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-2xl flex items-center gap-2">
                     <Crown className="h-6 w-6 text-primary" />
-                    พรีเมียม
+                    {t.subscription.premium}
                   </CardTitle>
-                  {isPremium && <Badge variant="default">แผนปัจจุบัน</Badge>}
+                  {isPremium && <Badge variant="default">{t.subscription.currentPlan}</Badge>}
                 </div>
-                <CardDescription>เข้าถึงฟีเจอร์ทั้งหมด</CardDescription>
+                <CardDescription>{lang === 'th' ? 'เข้าถึงฟีเจอร์ทั้งหมด' : 'Access all features'}</CardDescription>
                 <div className="mt-4">
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-bold">฿350</span>
-                    <span className="text-muted-foreground">/เดือน</span>
+                    <span className="text-muted-foreground">/{lang === 'th' ? 'เดือน' : 'month'}</span>
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    หรือ฿3,500/ปี (ประหยัด 2 เดือน)
+                    {lang === 'th' ? 'หรือ฿3,500/ปี (ประหยัด 2 เดือน)' : 'or ฿3,500/year (save 2 months)'}
                   </div>
                 </div>
               </CardHeader>
@@ -239,33 +241,33 @@ export default function Subscription() {
                 <ul className="space-y-3">
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span>สัตว์เลี้ยงไม่จำกัด</span>
+                    <span>{t.subscription.feature1Premium}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span>บันทึกไม่จำกัด</span>
+                    <span>{lang === 'th' ? 'บันทึกไม่จำกัด' : 'Unlimited records'}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span>ติดตามค่าใช้จ่าย</span>
+                    <span>{t.subscription.feature4Premium}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span>ดูแลสัตว์ป่วย</span>
+                    <span>{t.subscription.feature5Premium}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span>อัปโหลดรูปภาพไม่จำกัด</span>
+                    <span>{lang === 'th' ? 'อัปโหลดรูปภาพไม่จำกัด' : 'Unlimited photo uploads'}</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-5 w-5 text-primary" />
-                    <span>การแจ้งเตือนอัตโนมัติ</span>
+                    <span>{lang === 'th' ? 'การแจ้งเตือนอัตโนมัติ' : 'Automatic notifications'}</span>
                   </li>
                 </ul>
 
                 {isPremium ? (
                   <Button className="w-full mt-6" disabled variant="outline">
-                    แผนปัจจุบัน
+                    {t.subscription.currentPlan}
                   </Button>
                 ) : (
                   <div className="space-y-3 mt-6">
@@ -277,7 +279,7 @@ export default function Subscription() {
                         onClick={() => setSelectedPlan("monthly")}
                         size="sm"
                       >
-                        รายเดือน
+                        {lang === 'th' ? 'รายเดือน' : 'Monthly'}
                       </Button>
                       <Button
                         variant={
@@ -286,7 +288,7 @@ export default function Subscription() {
                         onClick={() => setSelectedPlan("yearly")}
                         size="sm"
                       >
-                        รายปี (ลด 17%)
+                        {lang === 'th' ? 'รายปี (ลด 17%)' : 'Yearly (17% off)'}
                       </Button>
                     </div>
 
@@ -310,15 +312,15 @@ export default function Subscription() {
                       createCheckoutSessionMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          กำลังดำเนินการ...
+                          {t.common.loading}
                         </>
                       ) : (
-                        `สมัครแผน${selectedPlan === "monthly" ? "รายเดือน" : "รายปี"}`
+                        `${t.subscription.upgradeNow} (${selectedPlan === "monthly" ? (lang === 'th' ? 'รายเดือน' : 'Monthly') : (lang === 'th' ? 'รายปี' : 'Yearly')})`
                       )}
                     </Button>
 
                     <p className="text-xs text-muted-foreground text-center">
-                      การชำระเงินจัดการโดย Stripe อย่างปลอดภัย
+                      {lang === 'th' ? 'การชำระเงินจัดการโดย Stripe อย่างปลอดภัย' : 'Payments securely processed by Stripe'}
                     </p>
                   </div>
                 )}
@@ -327,7 +329,7 @@ export default function Subscription() {
           </div>
 
           <div className="text-center text-sm text-muted-foreground">
-            คุณสามารถยกเลิกการสมัครสมาชิกได้ทุกเวลา ไม่มีค่าธรรมเนียมในการยกเลิก
+            {lang === 'th' ? 'คุณสามารถยกเลิกการสมัครสมาชิกได้ทุกเวลา ไม่มีค่าธรรมเนียมในการยกเลิก' : 'You can cancel your subscription at any time. No cancellation fees.'}
           </div>
         </div>
       </DashboardLayout>

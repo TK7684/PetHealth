@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Plus, Trash2, CalendarIcon, Edit, Pill, HeartPulse, Crown, Activity, CheckCircle2, AlertTriangle } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { th } from "date-fns/locale";
+import { th, enUS } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,12 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { api } from "@/lib/trpc";
 import { toast } from "sonner";
-
-const statusLabels: Record<string, string> = {
-  ongoing: "กำลังรักษา",
-  monitoring: "กำลังเฝ้าระวัง",
-  recovered: "หายดีแล้ว",
-};
+import { useI18n } from "@/contexts/I18nContext";
 
 const statusStyles: Record<string, string> = {
   ongoing: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
@@ -47,6 +42,15 @@ const statusIcons: Record<string, React.ReactNode> = {
 };
 
 export default function SickCare() {
+  const { t, lang } = useI18n();
+  const dateLocale = lang === "th" ? th : enUS;
+
+  const statusLabels: Record<string, string> = {
+    ongoing: t.sickCare.ongoing,
+    monitoring: t.sickCare.monitoring,
+    recovered: t.sickCare.recovered,
+  };
+
   const [selectedPetId, setSelectedPetId] = useState<number>(0);
   const [activeTab, setActiveTab] = useState("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -80,15 +84,15 @@ export default function SickCare() {
   const createMutation = useMutation({
     mutationFn: (data: any) => api.sickCareLogs.create.mutate(data),
     onSuccess: () => {
-      toast.success("เพิ่มบันทึกการรักษาสำเร็จแล้ว");
+      toast.success(t.success.saved);
       setAddDialogOpen(false);
       resetForm();
     },
     onError: (error: any) => {
       if (error.data?.code === "FORBIDDEN") {
-        toast.error("ฟีเจอร์นี้สำหรับผู้ใช้ Premium เท่านั้น");
+        toast.error(t.sickCare.premiumFeatureDescription);
       } else {
-        toast.error(`เพิ่มบันทึกการรักษาไม่สำเร็จ: ${error.message}`);
+        toast.error(`${lang === "th" ? "เพิ่มบันทึกการรักษาไม่สำเร็จ" : "Failed to add record"}: ${error.message}`);
       }
     },
   });
@@ -97,14 +101,14 @@ export default function SickCare() {
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       api.sickCareLogs.update.mutate({ logId: id, ...data }),
     onSuccess: () => {
-      toast.success("อัพเดทบันทึกการรักษาสำเร็จแล้ว");
+      toast.success(t.success.updated);
       setEditDialogOpen(false);
     },
     onError: (error: any) => {
       if (error.data?.code === "FORBIDDEN") {
-        toast.error("ฟีเจอร์นี้สำหรับผู้ใช้ Premium เท่านั้น");
+        toast.error(t.sickCare.premiumFeatureDescription);
       } else {
-        toast.error(`อัพเดทบันทึกการรักษาไม่สำเร็จ: ${error.message}`);
+        toast.error(`${lang === "th" ? "อัพเดทบันทึกการรักษาไม่สำเร็จ" : "Failed to update record"}: ${error.message}`);
       }
     },
   });
@@ -112,13 +116,13 @@ export default function SickCare() {
   const deleteMutation = useMutation({
     mutationFn: (logId: number) => api.sickCareLogs.delete.mutate({ logId }),
     onSuccess: () => {
-      toast.success("ลบบันทึกการรักษาสำเร็จแล้ว");
+      toast.success(t.success.deleted);
     },
     onError: (error: any) => {
       if (error.data?.code === "FORBIDDEN") {
-        toast.error("ฟีเจอร์นี้สำหรับผู้ใช้ Premium เท่านั้น");
+        toast.error(t.sickCare.premiumFeatureDescription);
       } else {
-        toast.error(`ลบบันทึกการรักษาไม่สำเร็จ: ${error.message}`);
+        toast.error(`${lang === "th" ? "ลบบันทึกการรักษาไม่สำเร็จ" : "Failed to delete record"}: ${error.message}`);
       }
     },
   });
@@ -138,7 +142,7 @@ export default function SickCare() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.petId || !formData.startDate || !formData.symptoms) {
-      toast.error("กรุณากรอกข้อมูลที่จำเป็นทั้งหมด");
+      toast.error(lang === "th" ? "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด" : "Please fill in all required fields");
       return;
     }
     createMutation.mutate({
@@ -196,25 +200,24 @@ export default function SickCare() {
     return (
       <div className="container mx-auto py-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">บันทึกการดูแลเจ็บป่วย</h1>
-          <p className="text-muted-foreground">จัดการบันทึกการรักษาและติดตามอาการของสัตว์เลี้ยง</p>
+          <h1 className="text-3xl font-bold">{t.sickCare.title}</h1>
+          <p className="text-muted-foreground">{lang === "th" ? "จัดการบันทึกการรักษาและติดตามอาการของสัตว์เลี้ยง" : "Manage treatment records and monitor your pet's symptoms"}</p>
         </div>
         <Card className="border-dashed">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
               <Crown className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
             </div>
-            <CardTitle className="text-xl">ฟีเจอร์สำหรับผู้ใช้ Premium</CardTitle>
+            <CardTitle className="text-xl">{t.sickCare.premiumFeature}</CardTitle>
             <CardDescription>
-              การจัดการบันทึกการดูแลเจ็บป่วยเป็นฟีเจอร์พิเศษสำหรับผู้ใช้ Premium เท่านั้น
-              อัปเกรดเพื่อเข้าถึงฟีเจอร์นี้และอีกมาก
+              {t.sickCare.premiumFeatureDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/subscription">
               <Button size="lg" className="gap-2">
                 <Crown className="h-4 w-4" />
-                อัปเกรดเป็น Premium
+                {t.subscription.upgradeNow}
               </Button>
             </Link>
           </CardContent>
@@ -226,23 +229,23 @@ export default function SickCare() {
   const formFields = (
     <>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="startDate" className="text-right">วันที่เริ่มป่วย</Label>
+        <Label htmlFor="startDate" className="text-right">{t.sickCare.startDate}</Label>
         <Input id="startDate" type="date" value={formData.startDate} onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))} className="col-span-3" />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="endDate" className="text-right">วันที่หาย</Label>
+        <Label htmlFor="endDate" className="text-right">{t.sickCare.endDate}</Label>
         <Input id="endDate" type="date" value={formData.endDate} onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))} className="col-span-3" />
       </div>
       <div className="grid grid-cols-4 items-start gap-4">
-        <Label htmlFor="symptoms" className="text-right pt-2">อาการ</Label>
-        <Textarea id="symptoms" value={formData.symptoms} onChange={(e) => setFormData((prev) => ({ ...prev, symptoms: e.target.value }))} className="col-span-3" rows={3} placeholder="อาการที่พบ เช่น ไม่กินอาหาร อ้วก" />
+        <Label htmlFor="symptoms" className="text-right pt-2">{t.sickCare.symptoms}</Label>
+        <Textarea id="symptoms" value={formData.symptoms} onChange={(e) => setFormData((prev) => ({ ...prev, symptoms: e.target.value }))} className="col-span-3" rows={3} placeholder={lang === "th" ? "อาการที่พบ เช่น ไม่กินอาหาร อ้วก" : "Observed symptoms, e.g. not eating, vomiting"} />
       </div>
       <div className="grid grid-cols-4 items-start gap-4">
-        <Label htmlFor="medications" className="text-right pt-2">ยาที่ใช้รักษา</Label>
-        <Textarea id="medications" value={formData.medications} onChange={(e) => setFormData((prev) => ({ ...prev, medications: e.target.value }))} className="col-span-3" rows={2} placeholder="ยาและวิธีการใช้ (ไม่จำเป็น)" />
+        <Label htmlFor="medications" className="text-right pt-2">{lang === "th" ? "ยาที่ใช้รักษา" : "Medications"}</Label>
+        <Textarea id="medications" value={formData.medications} onChange={(e) => setFormData((prev) => ({ ...prev, medications: e.target.value }))} className="col-span-3" rows={2} placeholder={lang === "th" ? "ยาและวิธีการใช้ (ไม่จำเป็น)" : "Medication and dosage (optional)"} />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="status" className="text-right">สถานะ</Label>
+        <Label htmlFor="status" className="text-right">{t.sickCare.status}</Label>
         <Select value={formData.status} onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}>
           <SelectTrigger className="col-span-3">
             <SelectValue />
@@ -255,8 +258,8 @@ export default function SickCare() {
         </Select>
       </div>
       <div className="grid grid-cols-4 items-start gap-4">
-        <Label htmlFor="notes" className="text-right pt-2">หมายเหตุ</Label>
-        <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))} className="col-span-3" rows={2} placeholder="หมายเหตุเพิ่มเติม (ไม่จำเป็น)" />
+        <Label htmlFor="notes" className="text-right pt-2">{t.common.notes}</Label>
+        <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))} className="col-span-3" rows={2} placeholder={lang === "th" ? "หมายเหตุเพิ่มเติม (ไม่จำเป็น)" : "Additional notes (optional)"} />
       </div>
     </>
   );
@@ -265,28 +268,28 @@ export default function SickCare() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">บันทึกการดูแลเจ็บป่วย</h1>
-          <p className="text-muted-foreground">จัดการบันทึกการรักษาและติดตามอาการของสัตว์เลี้ยง</p>
+          <h1 className="text-3xl font-bold">{t.sickCare.title}</h1>
+          <p className="text-muted-foreground">{lang === "th" ? "จัดการบันทึกการรักษาและติดตามอาการของสัตว์เลี้ยง" : "Manage treatment records and monitor your pet's symptoms"}</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              เพิ่มบันทึก
+              {t.sickCare.addNew}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>เพิ่มบันทึกการดูแลเจ็บป่วย</DialogTitle>
-                <DialogDescription>บันทึกอาการและข้อมูลการรักษา</DialogDescription>
+                <DialogTitle>{t.sickCare.title}</DialogTitle>
+                <DialogDescription>{lang === "th" ? "บันทึกอาการและข้อมูลการรักษา" : "Record symptoms and treatment information"}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="pet" className="text-right">สัตว์เลี้ยง</Label>
+                  <Label htmlFor="pet" className="text-right">{lang === "th" ? "สัตว์เลี้ยง" : "Pet"}</Label>
                   <Select value={formData.petId.toString() || selectedPetId.toString()} onValueChange={(value) => setFormData((prev) => ({ ...prev, petId: parseInt(value) }))}>
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+                      <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"} />
                     </SelectTrigger>
                     <SelectContent>
                       {pets?.map((pet) => (
@@ -299,7 +302,7 @@ export default function SickCare() {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+                  {createMutation.isPending ? t.common.loading : t.common.save}
                 </Button>
               </DialogFooter>
             </form>
@@ -309,13 +312,13 @@ export default function SickCare() {
 
       {/* Pet selector */}
       <div className="flex items-center gap-4">
-        <Label>เลือกสัตว์เลี้ยง:</Label>
+        <Label>{lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"}:</Label>
         {petsLoading ? (
           <Skeleton className="h-9 w-[200px]" />
         ) : (
           <Select value={selectedPetId.toString()} onValueChange={(value) => setSelectedPetId(parseInt(value))}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+              <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"} />
             </SelectTrigger>
             <SelectContent>
               {pets?.map((pet) => (
@@ -329,10 +332,10 @@ export default function SickCare() {
       {selectedPetId > 0 && (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
-            <TabsTrigger value="ongoing">กำลังรักษา</TabsTrigger>
-            <TabsTrigger value="monitoring">กำลังเฝ้าระวัง</TabsTrigger>
-            <TabsTrigger value="recovered">หายดีแล้ว</TabsTrigger>
+            <TabsTrigger value="all">{t.common.all}</TabsTrigger>
+            <TabsTrigger value="ongoing">{t.sickCare.ongoing}</TabsTrigger>
+            <TabsTrigger value="monitoring">{t.sickCare.monitoring}</TabsTrigger>
+            <TabsTrigger value="recovered">{t.sickCare.recovered}</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4 mt-4">
@@ -374,55 +377,55 @@ export default function SickCare() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
                           <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                          <span>เริ่มป่วย: {format(new Date(log.startDate), "d MMMM yyyy", { locale: th })}</span>
+                          <span>{t.sickCare.startDate}: {format(new Date(log.startDate), "d MMMM yyyy", { locale: dateLocale })}</span>
                         </div>
                         {log.endDate && (
                           <div className="flex items-center gap-2 text-sm text-green-600">
                             <CheckCircle2 className="h-4 w-4" />
-                            <span>หายดี: {format(new Date(log.endDate), "d MMMM yyyy", { locale: th })}</span>
+                            <span>{t.sickCare.recovered}: {format(new Date(log.endDate), "d MMMM yyyy", { locale: dateLocale })}</span>
                           </div>
                         )}
                         {log.medications && (
                           <div className="text-sm">
                             <span className="font-medium flex items-center gap-1">
                               <Pill className="h-4 w-4" />
-                              ยาที่ใช้รักษา:
+                              {lang === "th" ? "ยาที่ใช้รักษา" : "Medications"}:
                             </span>{" "}
                             {log.medications}
                           </div>
                         )}
                         {log.notes && (
                           <div className="text-sm">
-                            <span className="font-medium">หมายเหตุ:</span> {log.notes}
+                            <span className="font-medium">{t.common.notes}:</span> {log.notes}
                           </div>
                         )}
                         <div className="text-xs text-muted-foreground">
-                          บันทึกเมื่อ {formatDistanceToNow(new Date(log.startDate), { addSuffix: true, locale: th })}
+                          {formatDistanceToNow(new Date(log.startDate), { addSuffix: true, locale: dateLocale })}
                         </div>
                       </div>
                       <div className="mt-4 flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleEdit(log)}>
                           <Edit className="h-4 w-4 mr-1" />
-                          แก้ไข
+                          {t.common.edit}
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="outline" size="sm">
                               <Trash2 className="h-4 w-4 mr-1" />
-                              ลบ
+                              {t.common.delete}
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+                              <AlertDialogTitle>{lang === "th" ? "ยืนยันการลบ" : "Confirm Delete"}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                คุณแน่ใจหรือไม่ที่จะลบบันทึกการรักษานี้? การกระทำนี้ไม่สามารถย้อนกลับได้
+                                {lang === "th" ? "คุณแน่ใจหรือไม่ที่จะลบบันทึกการรักษานี้? การกระทำนี้ไม่สามารถย้อนกลับได้" : "Are you sure you want to delete this record? This action cannot be undone."}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                               <AlertDialogAction onClick={() => handleDelete(log.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                ลบ
+                                {t.common.delete}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -435,11 +438,11 @@ export default function SickCare() {
             ) : (
               <Card>
                 <CardHeader className="text-center">
-                  <CardTitle>ไม่มีบันทึกการรักษา</CardTitle>
+                  <CardTitle>{t.common.noData}</CardTitle>
                   <CardDescription>
                     {activeTab === "all"
-                      ? "ยังไม่มีบันทึกการดูแลเจ็บป่วย คลิกปุ่ม \"เพิ่มบันทึก\" เพื่อเริ่มต้น"
-                      : `ไม่มีบันทึกที่มีสถานะ "${statusLabels[activeTab] || activeTab}"`}
+                      ? (lang === "th" ? `ยังไม่มีบันทึกการดูแลเจ็บป่วย คลิกปุ่ม "${t.sickCare.addNew}" เพื่อเริ่มต้น` : `No sick care records yet. Click "${t.sickCare.addNew}" to get started.`)
+                      : `${lang === "th" ? "ไม่มีบันทึกที่มีสถานะ" : "No records with status"} "${statusLabels[activeTab] || activeTab}"`}
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -453,13 +456,13 @@ export default function SickCare() {
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle>แก้ไขบันทึกการดูแลเจ็บป่วย</DialogTitle>
-              <DialogDescription>แก้ไขข้อมูลอาการและการรักษา</DialogDescription>
+              <DialogTitle>{t.sickCare.editLog}</DialogTitle>
+              <DialogDescription>{lang === "th" ? "แก้ไขข้อมูลอาการและการรักษา" : "Edit symptoms and treatment details"}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">{formFields}</div>
             <DialogFooter>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+                {updateMutation.isPending ? t.common.loading : t.common.save}
               </Button>
             </DialogFooter>
           </form>

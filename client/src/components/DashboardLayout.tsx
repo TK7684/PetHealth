@@ -21,25 +21,28 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
+import { useI18n } from "@/contexts/I18nContext";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LayoutDashboard, LogOut, PanelLeft, PawPrint, Heart, Syringe, Activity, TrendingUp, DollarSign, Utensils, Stethoscope, Crown, Pill, Calendar } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "หน้าหลัก", path: "/" },
-  { icon: PawPrint, label: "สัตว์เลี้ยงของฉัน", path: "/pets" },
-  { icon: Heart, label: "บันทึกสุขภาพ", path: "/health-records" },
-  { icon: Syringe, label: "วัคซีน", path: "/vaccinations" },
-  { icon: Activity, label: "บันทึกพฤติกรรม", path: "/behavior-logs" },
-  { icon: TrendingUp, label: "ติดตามน้ำหนัก", path: "/weight-tracking" },
-  { icon: Utensils, label: "ตารางให้อาหาร", path: "/feeding-schedule" },
-  { icon: Pill, label: "ยาและการรักษา", path: "/medications" },
-  { icon: Calendar, label: "กิจกรรมรายวัน", path: "/daily-activities" },
-  { icon: DollarSign, label: "ค่าใช้จ่าย", path: "/expenses" },
-  { icon: Stethoscope, label: "ดูแลสัตว์ป่วย", path: "/sick-care" },
-  { icon: Crown, label: "อัพเกรดเป็น Premium", path: "/subscription" },
+// Keys into the translation `nav` section — resolved at render time via useI18n.
+const menuItemDefs = [
+  { icon: LayoutDashboard, key: "dashboard" as const, path: "/" },
+  { icon: PawPrint, key: "myPets" as const, path: "/pets" },
+  { icon: Heart, key: "healthRecords" as const, path: "/health-records" },
+  { icon: Syringe, key: "vaccinations" as const, path: "/vaccinations" },
+  { icon: Activity, key: "behaviorLogs" as const, path: "/behavior-logs" },
+  { icon: TrendingUp, key: "weightTracking" as const, path: "/weight-tracking" },
+  { icon: Utensils, key: "feedingSchedule" as const, path: "/feeding-schedule" },
+  { icon: Pill, key: "medications" as const, path: "/medications" },
+  { icon: Calendar, key: "dailyActivities" as const, path: "/daily-activities" },
+  { icon: DollarSign, key: "expenses" as const, path: "/expenses" },
+  { icon: Stethoscope, key: "sickCare" as const, path: "/sick-care" },
+  { icon: Crown, key: "upgradeToPremium" as const, path: "/subscription" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -57,6 +60,7 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const { t } = useI18n();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -83,7 +87,9 @@ export default function DashboardLayout({
             <div className="text-center space-y-2">
               <h1 className="text-2xl font-bold tracking-tight">{APP_TITLE}</h1>
               <p className="text-sm text-muted-foreground">
-                Please sign in to continue
+                {t.auth.login === "เข้าสู่ระบบ"
+                  ? "กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ"
+                  : "Please sign in to continue"}
               </p>
             </div>
           </div>
@@ -94,7 +100,7 @@ export default function DashboardLayout({
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
-            Sign in
+            {t.auth.login}
           </Button>
         </div>
       </div>
@@ -126,11 +132,16 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
+  const { t } = useI18n();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const menuItems = useMemo(
+    () => menuItemDefs.map(def => ({ ...def, label: t.nav[def.key] })),
+    [t],
+  );
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -241,6 +252,9 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
+            <div className="flex items-center justify-between gap-2 mb-2 group-data-[collapsible=icon]:justify-center">
+              <LanguageSwitcher />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -265,7 +279,7 @@ function DashboardLayoutContent({
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>{t.auth.logout}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

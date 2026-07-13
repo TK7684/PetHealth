@@ -29,12 +29,14 @@ import {
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface PetProfileProps {
   params: { id: string };
 }
 
 export default function PetProfile({ params }: PetProfileProps) {
+  const { t, lang } = useI18n();
   const { id } = useParams<{ id: string }>();
   const petId = parseInt(id || "0");
   const { user } = useAuth();
@@ -76,12 +78,12 @@ export default function PetProfile({ params }: PetProfileProps) {
     return (
       <DashboardLayout>
         <div className="container mx-auto py-6">
-          <h1 className="text-3xl font-bold">ไม่พบข้อมูลสัตว์เลี้ยง</h1>
+          <h1 className="text-3xl font-bold">{lang === 'th' ? 'ไม่พบข้อมูลสัตว์เลี้ยง' : 'Pet not found'}</h1>
           <p className="text-muted-foreground mt-2">
-            ไม่พบข้อมูลสัตว์เลี้ยงที่คุณกำลังมองหา
+            {lang === 'th' ? 'ไม่พบข้อมูลสัตว์เลี้ยงที่คุณกำลังมองหา' : 'The pet you are looking for was not found'}
           </p>
           <Link href="/pets">
-            <Button className="mt-4">กลับไปหน้าสัตว์เลี้ยง</Button>
+            <Button className="mt-4">{t.common.back}</Button>
           </Link>
         </div>
       </DashboardLayout>
@@ -117,33 +119,33 @@ export default function PetProfile({ params }: PetProfileProps) {
           <div className="flex-1">
             <h1 className="text-3xl font-bold">{pet.name}</h1>
             <div className="flex flex-wrap gap-2 mt-2">
-              <Badge variant="outline">{pet.breed || "ไม่ระบุสายพันธุ์"}</Badge>
+              <Badge variant="outline">{pet.breed || (lang === 'th' ? 'ไม่ระบุสายพันธุ์' : 'Unknown breed')}</Badge>
               {pet.gender && (
                 <Badge variant="outline">
                   {pet.gender === "male"
-                    ? "เพศผู้"
+                    ? t.pets.male
                     : pet.gender === "female"
-                      ? "เพศเมีย"
-                      : "ไม่ระบุเพศ"}
+                      ? t.pets.female
+                      : t.pets.unknown}
                 </Badge>
               )}
               {age !== null && (
                 <Badge variant="outline">
-                  {age === 0 ? "น้อยกว่า 1 ปี" : `${age} ปี`}
+                  {age === 0 ? (lang === 'th' ? 'น้อยกว่า 1 ปี' : 'Less than 1 year') : `${age} ${t.pets.years}`}
                 </Badge>
               )}
             </div>
             {pet.birthDate && (
               <p className="text-muted-foreground mt-2">
                 <Baby className="inline h-4 w-4 mr-1" />
-                วันเกิด:{" "}
+                {t.pets.birthDate}:{" "}
                 {format(new Date(pet.birthDate), "d MMMM yyyy", { locale: th })}
               </p>
             )}
           </div>
 
           <Link href={`/pets/${pet.id}/edit`}>
-            <Button variant="outline">แก้ไขข้อมูล</Button>
+            <Button variant="outline">{t.common.edit}</Button>
           </Link>
         </div>
 
@@ -160,9 +162,9 @@ export default function PetProfile({ params }: PetProfileProps) {
                       <Heart className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">บันทึกสุขภาพ</CardTitle>
+                      <CardTitle className="text-base">{t.healthRecords.title}</CardTitle>
                       <CardDescription>
-                        บันทึกการตรวจสุขภาพและการไปหาหมอ
+                        {lang === 'th' ? 'บันทึกการตรวจสุขภาพและการไปหาหมอ' : 'Health checkups and vet visits'}
                       </CardDescription>
                     </div>
                   </div>
@@ -172,7 +174,7 @@ export default function PetProfile({ params }: PetProfileProps) {
               {healthRecords && healthRecords.length > 0 && (
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    มีบันทึก {healthRecords.length} รายการ
+                    {lang === 'th' ? `มีบันทึก ${healthRecords.length} รายการ` : `${healthRecords.length} records`}
                   </p>
                 </CardContent>
               )}
@@ -188,8 +190,8 @@ export default function PetProfile({ params }: PetProfileProps) {
                       <Syringe className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">วัคซีน</CardTitle>
-                      <CardDescription>จัดการตารางวัคซีน</CardDescription>
+                      <CardTitle className="text-base">{t.vaccinations.title}</CardTitle>
+                      <CardDescription>{t.dashboard.manageVaccineSchedule}</CardDescription>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -198,7 +200,7 @@ export default function PetProfile({ params }: PetProfileProps) {
               {vaccinations && vaccinations.length > 0 && (
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    มีวัคซีน {vaccinations.length} รายการ
+                    {lang === 'th' ? `มีวัคซีน ${vaccinations.length} รายการ` : `${vaccinations.length} vaccinations`}
                   </p>
                 </CardContent>
               )}
@@ -215,9 +217,9 @@ export default function PetProfile({ params }: PetProfileProps) {
                     </div>
                     <div>
                       <CardTitle className="text-base">
-                        บันทึกพฤติกรรม
+                        {t.behaviorLogs.title}
                       </CardTitle>
-                      <CardDescription>ติดตามพฤติกรรมประจำวัน</CardDescription>
+                      <CardDescription>{lang === 'th' ? 'ติดตามพฤติกรรมประจำวัน' : 'Track daily behavior'}</CardDescription>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -235,9 +237,9 @@ export default function PetProfile({ params }: PetProfileProps) {
                       <TrendingUp className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">ติดตามน้ำหนัก</CardTitle>
+                      <CardTitle className="text-base">{t.weightTracking.title}</CardTitle>
                       <CardDescription>
-                        ติดตามแนวโน้มการเจริญเติบโต
+                        {t.dashboard.monitorGrowthTrends}
                       </CardDescription>
                     </div>
                   </div>
@@ -256,8 +258,8 @@ export default function PetProfile({ params }: PetProfileProps) {
                       <Utensils className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">ตารางให้อาหาร</CardTitle>
-                      <CardDescription>จัดการตารางให้อาหาร</CardDescription>
+                      <CardTitle className="text-base">{t.feedingSchedule.title}</CardTitle>
+                      <CardDescription>{lang === 'th' ? 'จัดการตารางให้อาหาร' : 'Manage feeding schedule'}</CardDescription>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -275,9 +277,9 @@ export default function PetProfile({ params }: PetProfileProps) {
                       <Pill className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">ยาและการรักษา</CardTitle>
+                      <CardTitle className="text-base">{t.medications.title}</CardTitle>
                       <CardDescription>
-                        ติดตามการให้ยาเห็บหมัดและยาถ่ายพยาธิ
+                        {lang === 'th' ? 'ติดตามการให้ยาเห็บหมัดและยาถ่ายพยาธิ' : 'Track flea/tick and deworming medication'}
                       </CardDescription>
                     </div>
                   </div>
@@ -287,7 +289,7 @@ export default function PetProfile({ params }: PetProfileProps) {
               {medications && medications.length > 0 && (
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    มียาที่ต้องติดตาม {medications.length} รายการ
+                    {lang === 'th' ? `มียาที่ต้องติดตาม ${medications.length} รายการ` : `${medications.length} medications`}
                   </p>
                 </CardContent>
               )}
@@ -303,9 +305,9 @@ export default function PetProfile({ params }: PetProfileProps) {
                       <Calendar className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">กิจกรรมรายวัน</CardTitle>
+                      <CardTitle className="text-base">{t.dailyActivities.title}</CardTitle>
                       <CardDescription>
-                        บันทึกกิจกรรมประจำวันและแชร์ไปยัง Instagram
+                        {lang === 'th' ? 'บันทึกกิจกรรมประจำวันและแชร์ไปยัง Instagram' : 'Log daily activities and share to Instagram'}
                       </CardDescription>
                     </div>
                   </div>
@@ -324,9 +326,9 @@ export default function PetProfile({ params }: PetProfileProps) {
                       <DollarSign className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">ค่าใช้จ่าย</CardTitle>
+                      <CardTitle className="text-base">{t.expenses.title}</CardTitle>
                       <CardDescription>
-                        ติดตามค่าใช้จ่าย (Premium)
+                        {lang === 'th' ? 'ติดตามค่าใช้จ่าย (Premium)' : 'Track expenses (Premium)'}
                       </CardDescription>
                     </div>
                   </div>
@@ -345,9 +347,9 @@ export default function PetProfile({ params }: PetProfileProps) {
                       <Stethoscope className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">ดูแลสัตว์ป่วย</CardTitle>
+                      <CardTitle className="text-base">{t.sickCare.title}</CardTitle>
                       <CardDescription>
-                        จัดการการดูแลสัตว์ป่วย (Premium)
+                        {lang === 'th' ? 'จัดการการดูแลสัตว์ป่วย (Premium)' : 'Manage sick care (Premium)'}
                       </CardDescription>
                     </div>
                   </div>

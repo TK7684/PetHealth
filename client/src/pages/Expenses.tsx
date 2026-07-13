@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Plus, Trash2, CalendarIcon, DollarSign, Receipt, TrendingUp, Crown } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { th } from "date-fns/locale";
+import { th, enUS } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,16 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { api } from "@/lib/trpc";
 import { toast } from "sonner";
-
-const categoryLabels: Record<string, string> = {
-  อาหาร: "อาหาร",
-  ยา: "ยา",
-  วัคซีน: "วัคซีน",
-  ตรวจสุขภาพ: "ตรวจสุขภาพ",
-  ผ่าตัด: "ผ่าตัด",
-  อุปกรณ์: "อุปกรณ์",
-  "อื่นๆ": "อื่นๆ",
-};
+import { useI18n } from "@/contexts/I18nContext";
 
 const categoryColors: Record<string, string> = {
   อาหาร: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
@@ -48,6 +39,19 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function Expenses() {
+  const { t, lang } = useI18n();
+  const dateLocale = lang === "th" ? th : enUS;
+
+  const categoryLabels: Record<string, string> = {
+    อาหาร: lang === "th" ? "อาหาร" : "Food",
+    ยา: lang === "th" ? "ยา" : "Medicine",
+    วัคซีน: lang === "th" ? "วัคซีน" : "Vaccine",
+    ตรวจสุขภาพ: lang === "th" ? "ตรวจสุขภาพ" : "Health Checkup",
+    ผ่าตัด: lang === "th" ? "ผ่าตัด" : "Surgery",
+    อุปกรณ์: lang === "th" ? "อุปกรณ์" : "Equipment",
+    "อื่นๆ": lang === "th" ? "อื่นๆ" : "Other",
+  };
+
   const [selectedPetId, setSelectedPetId] = useState<number>(0);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -76,15 +80,15 @@ export default function Expenses() {
   const createMutation = useMutation({
     mutationFn: (data: any) => api.expenses.create.mutate(data),
     onSuccess: () => {
-      toast.success("เพิ่มรายจ่ายสำเร็จแล้ว");
+      toast.success(t.success.saved);
       setAddDialogOpen(false);
       resetForm();
     },
     onError: (error: any) => {
       if (error.data?.code === "FORBIDDEN") {
-        toast.error("ฟีเจอร์นี้สำหรับผู้ใช้ Premium เท่านั้น");
+        toast.error(t.expenses.premiumFeatureDescription);
       } else {
-        toast.error(`เพิ่มรายจ่ายไม่สำเร็จ: ${error.message}`);
+        toast.error(`${lang === "th" ? "เพิ่มรายจ่ายไม่สำเร็จ" : "Failed to add expense"}: ${error.message}`);
       }
     },
   });
@@ -92,13 +96,13 @@ export default function Expenses() {
   const deleteMutation = useMutation({
     mutationFn: (expenseId: number) => api.expenses.delete.mutate({ expenseId }),
     onSuccess: () => {
-      toast.success("ลบรายจ่ายสำเร็จแล้ว");
+      toast.success(t.success.deleted);
     },
     onError: (error: any) => {
       if (error.data?.code === "FORBIDDEN") {
-        toast.error("ฟีเจอร์นี้สำหรับผู้ใช้ Premium เท่านั้น");
+        toast.error(t.expenses.premiumFeatureDescription);
       } else {
-        toast.error(`ลบรายจ่ายไม่สำเร็จ: ${error.message}`);
+        toast.error(`${lang === "th" ? "ลบรายจ่ายไม่สำเร็จ" : "Failed to delete expense"}: ${error.message}`);
       }
     },
   });
@@ -116,7 +120,7 @@ export default function Expenses() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.petId || !formData.date || !formData.amount) {
-      toast.error("กรุณากรอกข้อมูลที่จำเป็นทั้งหมด");
+      toast.error(lang === "th" ? "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด" : "Please fill in all required fields");
       return;
     }
     createMutation.mutate({
@@ -164,25 +168,24 @@ export default function Expenses() {
     return (
       <div className="container mx-auto py-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">รายจ่าย</h1>
-          <p className="text-muted-foreground">ติดตามรายจ่ายทั้งหมดของสัตว์เลี้ยง</p>
+          <h1 className="text-3xl font-bold">{t.expenses.title}</h1>
+          <p className="text-muted-foreground">{lang === "th" ? "ติดตามรายจ่ายทั้งหมดของสัตว์เลี้ยง" : "Track all your pet expenses"}</p>
         </div>
         <Card className="border-dashed">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
               <Crown className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
             </div>
-            <CardTitle className="text-xl">ฟีเจอร์สำหรับผู้ใช้ Premium</CardTitle>
+            <CardTitle className="text-xl">{t.expenses.premiumFeature}</CardTitle>
             <CardDescription>
-              การติดตามรายจ่ายเป็นฟีเจอร์พิเศษสำหรับผู้ใช้ Premium เท่านั้น
-              อัปเกรดเพื่อเข้าถึงฟีเจอร์นี้และอีกมาก
+              {t.expenses.premiumFeatureDescription}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/subscription">
               <Button size="lg" className="gap-2">
                 <Crown className="h-4 w-4" />
-                อัปเกรดเป็น Premium
+                {t.subscription.upgradeNow}
               </Button>
             </Link>
           </CardContent>
@@ -195,28 +198,28 @@ export default function Expenses() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">รายจ่าย</h1>
-          <p className="text-muted-foreground">ติดตามรายจ่ายทั้งหมดของสัตว์เลี้ยง</p>
+          <h1 className="text-3xl font-bold">{t.expenses.title}</h1>
+          <p className="text-muted-foreground">{lang === "th" ? "ติดตามรายจ่ายทั้งหมดของสัตว์เลี้ยง" : "Track all your pet expenses"}</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              เพิ่มรายจ่าย
+              {t.expenses.addNew}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>เพิ่มรายจ่าย</DialogTitle>
-                <DialogDescription>บันทึกรายจ่ายสำหรับสัตว์เลี้ยง</DialogDescription>
+                <DialogTitle>{t.expenses.addNew}</DialogTitle>
+                <DialogDescription>{lang === "th" ? "บันทึกรายจ่ายสำหรับสัตว์เลี้ยง" : "Record an expense for your pet"}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="pet" className="text-right">สัตว์เลี้ยง</Label>
+                  <Label htmlFor="pet" className="text-right">{lang === "th" ? "สัตว์เลี้ยง" : "Pet"}</Label>
                   <Select value={formData.petId.toString() || selectedPetId.toString()} onValueChange={(value) => setFormData((prev) => ({ ...prev, petId: parseInt(value) }))}>
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+                      <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"} />
                     </SelectTrigger>
                     <SelectContent>
                       {pets?.map((pet) => (
@@ -226,11 +229,11 @@ export default function Expenses() {
                   </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="date" className="text-right">วันที่</Label>
+                  <Label htmlFor="date" className="text-right">{t.common.date}</Label>
                   <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))} className="col-span-3" />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="category" className="text-right">หมวดหมู่</Label>
+                  <Label htmlFor="category" className="text-right">{t.expenses.category}</Label>
                   <Select value={formData.category} onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}>
                     <SelectTrigger className="col-span-3">
                       <SelectValue />
@@ -243,17 +246,17 @@ export default function Expenses() {
                   </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="amount" className="text-right">จำนวนเงิน (฿)</Label>
+                  <Label htmlFor="amount" className="text-right">{lang === "th" ? "จำนวนเงิน (฿)" : "Amount (฿)"}</Label>
                   <Input id="amount" type="number" min="0" value={formData.amount} onChange={(e) => setFormData((prev) => ({ ...prev, amount: e.target.value }))} className="col-span-3" placeholder="0" />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">รายละเอียด</Label>
-                  <Textarea id="description" value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} className="col-span-3" rows={2} placeholder="รายละเอียดเพิ่มเติม (ไม่จำเป็น)" />
+                  <Label htmlFor="description" className="text-right">{t.expenses.description}</Label>
+                  <Textarea id="description" value={formData.description} onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))} className="col-span-3" rows={2} placeholder={lang === "th" ? "รายละเอียดเพิ่มเติม (ไม่จำเป็น)" : "Additional details (optional)"} />
                 </div>
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+                  {createMutation.isPending ? t.common.loading : t.common.save}
                 </Button>
               </DialogFooter>
             </form>
@@ -263,13 +266,13 @@ export default function Expenses() {
 
       {/* Pet selector */}
       <div className="flex items-center gap-4">
-        <Label>เลือกสัตว์เลี้ยง:</Label>
+        <Label>{lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"}:</Label>
         {petsLoading ? (
           <Skeleton className="h-9 w-[200px]" />
         ) : (
           <Select value={selectedPetId.toString()} onValueChange={(value) => setSelectedPetId(parseInt(value))}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+              <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"} />
             </SelectTrigger>
             <SelectContent>
               {pets?.map((pet) => (
@@ -300,32 +303,32 @@ export default function Expenses() {
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">รวมทั้งหมด</CardTitle>
+                  <CardTitle className="text-sm font-medium">{lang === "th" ? "รวมทั้งหมด" : "Total"}</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{formatBaht(totalExpenses)}</div>
-                  <p className="text-xs text-muted-foreground">ยอดรวมทั้งหมด</p>
+                  <p className="text-xs text-muted-foreground">{lang === "th" ? "ยอดรวมทั้งหมด" : "All-time total"}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">เดือนนี้</CardTitle>
+                  <CardTitle className="text-sm font-medium">{lang === "th" ? "เดือนนี้" : "This Month"}</CardTitle>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{formatBaht(thisMonthTotal)}</div>
-                  <p className="text-xs text-muted-foreground">{format(monthStart, "MMMM yyyy", { locale: th })}</p>
+                  <p className="text-xs text-muted-foreground">{format(monthStart, "MMMM yyyy", { locale: dateLocale })}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">จำนวนรายการ</CardTitle>
+                  <CardTitle className="text-sm font-medium">{lang === "th" ? "จำนวนรายการ" : "Records"}</CardTitle>
                   <Receipt className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{recordCount}</div>
-                  <p className="text-xs text-muted-foreground">รายการทั้งหมด</p>
+                  <p className="text-xs text-muted-foreground">{lang === "th" ? "รายการทั้งหมด" : "Total entries"}</p>
                 </CardContent>
               </Card>
             </div>
@@ -334,14 +337,14 @@ export default function Expenses() {
           {/* Category breakdown */}
           {categoryBreakdown && Object.keys(categoryBreakdown).length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold">สรุปตามหมวดหมู่</h2>
+              <h2 className="text-lg font-semibold">{lang === "th" ? "สรุปตามหมวดหมู่" : "Category Breakdown"}</h2>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Object.entries(categoryBreakdown).map(([category, data]) => (
                   <Card key={category}>
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <Badge className={categoryColors[category] || ""}>{categoryLabels[category] || category}</Badge>
-                        <span className="text-sm text-muted-foreground">{data.count} รายการ</span>
+                        <span className="text-sm text-muted-foreground">{data.count} {lang === "th" ? "รายการ" : "items"}</span>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -355,7 +358,7 @@ export default function Expenses() {
 
           {/* Expense list */}
           <div className="space-y-3">
-            <h2 className="text-lg font-semibold">รายการรายจ่าย</h2>
+            <h2 className="text-lg font-semibold">{lang === "th" ? "รายการรายจ่าย" : "Expense List"}</h2>
             {expensesLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -386,7 +389,7 @@ export default function Expenses() {
                           <div className="text-sm font-medium">{expense.description || "-"}</div>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <CalendarIcon className="h-3 w-3" />
-                            {format(new Date(expense.date), "d MMMM yyyy", { locale: th })}
+                            {format(new Date(expense.date), "d MMMM yyyy", { locale: dateLocale })}
                           </div>
                         </div>
                       </div>
@@ -400,15 +403,15 @@ export default function Expenses() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+                              <AlertDialogTitle>{lang === "th" ? "ยืนยันการลบ" : "Confirm Delete"}</AlertDialogTitle>
                               <AlertDialogDescription>
-                                คุณแน่ใจหรือไม่ที่จะลบรายจ่ายรายการนี้? การกระทำนี้ไม่สามารถย้อนกลับได้
+                                {lang === "th" ? "คุณแน่ใจหรือไม่ที่จะลบรายจ่ายรายการนี้? การกระทำนี้ไม่สามารถย้อนกลับได้" : "Are you sure you want to delete this expense? This action cannot be undone."}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                              <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                               <AlertDialogAction onClick={() => handleDelete(expense.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                ลบ
+                                {t.common.delete}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -421,8 +424,8 @@ export default function Expenses() {
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle>ไม่มีรายจ่าย</CardTitle>
-                  <CardDescription>ยังไม่มีรายจ่ายที่บันทึก คลิกปุ่ม "เพิ่มรายจ่าย" เพื่อเริ่มต้น</CardDescription>
+                  <CardTitle>{t.common.noData}</CardTitle>
+                  <CardDescription>{lang === "th" ? `ยังไม่มีรายจ่ายที่บันทึก คลิกปุ่ม "${t.expenses.addNew}" เพื่อเริ่มต้น` : `No expenses recorded yet. Click "${t.expenses.addNew}" to get started.`}</CardDescription>
                 </CardHeader>
               </Card>
             )}

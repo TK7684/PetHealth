@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bell, Calendar, Clock, Pill, Syringe } from "lucide-react";
 import { format, isAfter, addDays } from "date-fns";
-import { th } from "date-fns/locale";
+import { th, enUS } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface UpcomingRemindersProps {
   petId?: number;
@@ -13,6 +14,8 @@ interface UpcomingRemindersProps {
 }
 
 export function UpcomingReminders({ petId, limit = 5 }: UpcomingRemindersProps) {
+  const { t, lang } = useI18n();
+  const dateLocale = lang === "th" ? th : enUS;
   const { data: pets, isLoading: petsLoading } = trpc.pets.list.useQuery();
   const { data: vaccinations, isLoading: vaccinationsLoading } = trpc.vaccinations.list.useQuery(
     { petId: petId || 0 },
@@ -55,7 +58,7 @@ export function UpcomingReminders({ petId, limit = 5 }: UpcomingRemindersProps) 
           reminders.push({
             id: `vaccination-${vaccination.id}`,
             type: 'vaccination',
-            title: `วัคซีน ${vaccination.vaccineName}`,
+            title: `${t.vaccinations.title} ${vaccination.vaccineName}`,
             dueDate: nextDate,
             isOverdue,
             petId: vaccination.petId,
@@ -75,7 +78,7 @@ export function UpcomingReminders({ petId, limit = 5 }: UpcomingRemindersProps) 
           reminders.push({
             id: `medication-${medication.id}`,
             type: 'medication',
-            title: `ยา ${medication.medicationName}`,
+            title: `${t.medications.title} ${medication.medicationName}`,
             dueDate: nextDate,
             isOverdue,
             petId: medication.petId,
@@ -99,7 +102,7 @@ export function UpcomingReminders({ petId, limit = 5 }: UpcomingRemindersProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            การแจ้งเตือนที่ใกล้ถึง
+            {lang === "th" ? "การแจ้งเตือนที่ใกล้ถึง" : "Upcoming Reminders"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -125,12 +128,12 @@ export function UpcomingReminders({ petId, limit = 5 }: UpcomingRemindersProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            การแจ้งเตือนที่ใกล้ถึง
+            {lang === "th" ? "การแจ้งเตือนที่ใกล้ถึง" : "Upcoming Reminders"}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-4 text-muted-foreground">
-            ไม่มีการแจ้งเตือนที่ใกล้ถึง
+            {lang === "th" ? "ไม่มีการแจ้งเตือนที่ใกล้ถึง" : "No upcoming reminders"}
           </div>
         </CardContent>
       </Card>
@@ -142,10 +145,10 @@ export function UpcomingReminders({ petId, limit = 5 }: UpcomingRemindersProps) 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bell className="h-5 w-5" />
-          การแจ้งเตือนที่ใกล้ถึง
+          {lang === "th" ? "การแจ้งเตือนที่ใกล้ถึง" : "Upcoming Reminders"}
         </CardTitle>
         <CardDescription>
-          วัคซีนและยาที่ต้องให้ในเร็วๆ นี้
+          {lang === "th" ? "วัคซีนและยาที่ต้องให้ในเร็วๆ นี้" : "Upcoming vaccines and medications"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -171,19 +174,19 @@ export function UpcomingReminders({ petId, limit = 5 }: UpcomingRemindersProps) 
                     <p className="font-medium truncate">{reminder.title}</p>
                     {reminder.isOverdue && (
                       <Badge variant="destructive" className="text-xs">
-                        ล่าช้าแล้ว
+                        {lang === "th" ? "ล่าช้าแล้ว" : "Overdue"}
                       </Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-3 w-3" />
                     <span>
-                      {format(reminder.dueDate, "d MMMM yyyy", { locale: th })}
+                      {format(reminder.dueDate, "d MMMM yyyy", { locale: dateLocale })}
                     </span>
                   </div>
                   {pet && (
                     <div className="text-sm text-muted-foreground">
-                      สำหรับ: {pet.name}
+                      {lang === "th" ? "สำหรับ" : "For"}: {pet.name}
                     </div>
                   )}
                 </div>

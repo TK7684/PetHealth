@@ -23,16 +23,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { api } from "@/lib/trpc";
 import { toast } from "sonner";
-
-const frequencyLabels: Record<string, string> = {
-  daily: "ทุกวัน",
-  "twice daily": "วันละ 2 ครั้ง",
-  "three times daily": "วันละ 3 ครั้ง",
-  weekly: "ทุกสัปดาห์",
-  custom: "กำหนดเอง",
-};
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function FeedingSchedule() {
+  const { t, lang } = useI18n();
+
+  const frequencyLabels: Record<string, string> = {
+    daily: lang === "th" ? "ทุกวัน" : "Daily",
+    "twice daily": lang === "th" ? "วันละ 2 ครั้ง" : "Twice daily",
+    "three times daily": lang === "th" ? "วันละ 3 ครั้ง" : "Three times daily",
+    weekly: lang === "th" ? "ทุกสัปดาห์" : "Weekly",
+    custom: lang === "th" ? "กำหนดเอง" : "Custom",
+  };
+
   const [selectedPetId, setSelectedPetId] = useState<number>(0);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -61,12 +64,12 @@ export default function FeedingSchedule() {
   const createMutation = useMutation({
     mutationFn: (data: any) => api.feedingSchedules.create.mutate(data),
     onSuccess: () => {
-      toast.success("เพิ่มตารางให้อาหารสำเร็จแล้ว");
+      toast.success(t.success.saved);
       setAddDialogOpen(false);
       resetForm();
     },
     onError: (error) => {
-      toast.error(`เพิ่มตารางให้อาหารไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "เพิ่มตารางให้อาหารไม่สำเร็จ" : "Failed to add schedule"}: ${error.message}`);
     },
   });
 
@@ -74,21 +77,21 @@ export default function FeedingSchedule() {
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       api.feedingSchedules.update.mutate({ scheduleId: id, ...data }),
     onSuccess: () => {
-      toast.success("อัพเดทตารางให้อาหารสำเร็จแล้ว");
+      toast.success(t.success.updated);
       setEditDialogOpen(false);
     },
     onError: (error) => {
-      toast.error(`อัพเดทตารางให้อาหารไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "อัพเดทตารางให้อาหารไม่สำเร็จ" : "Failed to update schedule"}: ${error.message}`);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (scheduleId: number) => api.feedingSchedules.delete.mutate({ scheduleId }),
     onSuccess: () => {
-      toast.success("ลบตารางให้อาหารสำเร็จแล้ว");
+      toast.success(t.success.deleted);
     },
     onError: (error) => {
-      toast.error(`ลบตารางให้อาหารไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "ลบตารางให้อาหารไม่สำเร็จ" : "Failed to delete schedule"}: ${error.message}`);
     },
   });
 
@@ -106,7 +109,7 @@ export default function FeedingSchedule() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.petId || !formData.foodType || !formData.amount) {
-      toast.error("กรุณากรอกข้อมูลที่จำเป็นทั้งหมด");
+      toast.error(lang === "th" ? "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด" : "Please fill in all required fields");
       return;
     }
     createMutation.mutate({
@@ -154,15 +157,15 @@ export default function FeedingSchedule() {
   const formFields = (
     <>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="foodType" className="text-right">ประเภทอาหาร</Label>
-        <Input id="foodType" value={formData.foodType} onChange={(e) => setFormData((prev) => ({ ...prev, foodType: e.target.value }))} className="col-span-3" placeholder="เช่น อาหารเม็ด อาหารเปียก" />
+        <Label htmlFor="foodType" className="text-right">{t.feedingSchedule.foodType}</Label>
+        <Input id="foodType" value={formData.foodType} onChange={(e) => setFormData((prev) => ({ ...prev, foodType: e.target.value }))} className="col-span-3" placeholder={lang === "th" ? "เช่น อาหารเม็ด อาหารเปียก" : "e.g. Dry food, Wet food"} />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="amount" className="text-right">ปริมาณ</Label>
-        <Input id="amount" value={formData.amount} onChange={(e) => setFormData((prev) => ({ ...prev, amount: e.target.value }))} className="col-span-3" placeholder="เช่น 100 กรัม 1 ถ้วย" />
+        <Label htmlFor="amount" className="text-right">{t.feedingSchedule.amount}</Label>
+        <Input id="amount" value={formData.amount} onChange={(e) => setFormData((prev) => ({ ...prev, amount: e.target.value }))} className="col-span-3" placeholder={lang === "th" ? "เช่น 100 กรัม 1 ถ้วย" : "e.g. 100g, 1 cup"} />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="frequency" className="text-right">ความถี่</Label>
+        <Label htmlFor="frequency" className="text-right">{t.feedingSchedule.frequency}</Label>
         <Select value={formData.frequency} onValueChange={(value) => setFormData((prev) => ({ ...prev, frequency: value }))}>
           <SelectTrigger className="col-span-3">
             <SelectValue />
@@ -175,12 +178,12 @@ export default function FeedingSchedule() {
         </Select>
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="time" className="text-right">เวลา</Label>
+        <Label htmlFor="time" className="text-right">{t.feedingSchedule.time}</Label>
         <Input id="time" type="time" value={formData.time} onChange={(e) => setFormData((prev) => ({ ...prev, time: e.target.value }))} className="col-span-3" />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="notes" className="text-right">หมายเหตุ</Label>
-        <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))} className="col-span-3" rows={2} placeholder="หมายเหตุเพิ่มเติม (ไม่จำเป็น)" />
+        <Label htmlFor="notes" className="text-right">{t.common.notes}</Label>
+        <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))} className="col-span-3" rows={2} placeholder={lang === "th" ? "หมายเหตุเพิ่มเติม (ไม่จำเป็น)" : "Additional notes (optional)"} />
       </div>
     </>
   );
@@ -189,28 +192,28 @@ export default function FeedingSchedule() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">ตารางให้อาหาร</h1>
-          <p className="text-muted-foreground">จัดการตารางและข้อมูลการให้อาหารสัตว์เลี้ยง</p>
+          <h1 className="text-3xl font-bold">{t.feedingSchedule.title}</h1>
+          <p className="text-muted-foreground">{lang === "th" ? "จัดการตารางและข้อมูลการให้อาหารสัตว์เลี้ยง" : "Manage feeding schedules and information"}</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              เพิ่มตาราง
+              {t.feedingSchedule.addNew}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>เพิ่มตารางให้อาหาร</DialogTitle>
-                <DialogDescription>ตั้งค่าตารางให้อาหารสำหรับสัตว์เลี้ยง</DialogDescription>
+                <DialogTitle>{t.feedingSchedule.title}</DialogTitle>
+                <DialogDescription>{lang === "th" ? "ตั้งค่าตารางให้อาหารสำหรับสัตว์เลี้ยง" : "Set up a feeding schedule for your pet"}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="pet" className="text-right">สัตว์เลี้ยง</Label>
+                  <Label htmlFor="pet" className="text-right">{lang === "th" ? "สัตว์เลี้ยง" : "Pet"}</Label>
                   <Select value={formData.petId.toString() || selectedPetId.toString()} onValueChange={(value) => setFormData((prev) => ({ ...prev, petId: parseInt(value) }))}>
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+                      <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"} />
                     </SelectTrigger>
                     <SelectContent>
                       {pets?.map((pet) => (
@@ -223,7 +226,7 @@ export default function FeedingSchedule() {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+                  {createMutation.isPending ? t.common.loading : t.common.save}
                 </Button>
               </DialogFooter>
             </form>
@@ -233,13 +236,13 @@ export default function FeedingSchedule() {
 
       {/* Pet selector */}
       <div className="flex items-center gap-4">
-        <Label>เลือกสัตว์เลี้ยง:</Label>
+        <Label>{lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"}:</Label>
         {petsLoading ? (
           <Skeleton className="h-9 w-[200px]" />
         ) : (
           <Select value={selectedPetId.toString()} onValueChange={(value) => setSelectedPetId(parseInt(value))}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+              <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"} />
             </SelectTrigger>
             <SelectContent>
               {pets?.map((pet) => (
@@ -280,45 +283,45 @@ export default function FeedingSchedule() {
                       </CardTitle>
                       <Badge variant="outline">{frequencyLabels[schedule.frequency] || schedule.frequency}</Badge>
                     </div>
-                    <CardDescription>ปริมาณ: {schedule.amount}</CardDescription>
+                    <CardDescription>{t.feedingSchedule.amount}: {schedule.amount}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       {schedule.time && (
                         <div className="flex items-center gap-2 text-sm">
                           <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>เวลา: {schedule.time}</span>
+                          <span>{t.feedingSchedule.time}: {schedule.time}</span>
                         </div>
                       )}
                       {schedule.notes && (
                         <div className="text-sm">
-                          <span className="font-medium">หมายเหตุ:</span> {schedule.notes}
+                          <span className="font-medium">{t.common.notes}:</span> {schedule.notes}
                         </div>
                       )}
                     </div>
                     <div className="mt-4 flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => handleEdit(schedule)}>
                         <Edit className="h-4 w-4 mr-1" />
-                        แก้ไข
+                        {t.common.edit}
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" size="sm">
                             <Trash2 className="h-4 w-4 mr-1" />
-                            ลบ
+                            {t.common.delete}
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+                            <AlertDialogTitle>{lang === "th" ? "ยืนยันการลบ" : "Confirm Delete"}</AlertDialogTitle>
                             <AlertDialogDescription>
-                              คุณแน่ใจหรือไม่ที่จะลบตารางให้อาหารนี้? การกระทำนี้ไม่สามารถย้อนกลับได้
+                              {lang === "th" ? "คุณแน่ใจหรือไม่ที่จะลบตารางให้อาหารนี้? การกระทำนี้ไม่สามารถย้อนกลับได้" : "Are you sure you want to delete this schedule? This action cannot be undone."}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
                             <AlertDialogAction onClick={() => handleDelete(schedule.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                              ลบ
+                              {t.common.delete}
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -331,9 +334,9 @@ export default function FeedingSchedule() {
           ) : (
             <Card>
               <CardHeader className="text-center">
-                <CardTitle>ไม่มีตารางให้อาหาร</CardTitle>
+                <CardTitle>{t.common.noData}</CardTitle>
                 <CardDescription>
-                  ยังไม่มีตารางให้อาหารที่บันทึก คลิกปุ่ม "เพิ่มตาราง" เพื่อเริ่มต้น
+                  {lang === "th" ? `ยังไม่มีตารางให้อาหารที่บันทึก คลิกปุ่ม "${t.feedingSchedule.addNew}" เพื่อเริ่มต้น` : `No schedules yet. Click "${t.feedingSchedule.addNew}" to get started.`}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -346,13 +349,13 @@ export default function FeedingSchedule() {
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle>แก้ไขตารางให้อาหาร</DialogTitle>
-              <DialogDescription>แก้ไขข้อมูลตารางให้อาหาร</DialogDescription>
+              <DialogTitle>{t.feedingSchedule.editSchedule}</DialogTitle>
+              <DialogDescription>{lang === "th" ? "แก้ไขข้อมูลตารางให้อาหาร" : "Edit feeding schedule details"}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">{formFields}</div>
             <DialogFooter>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+                {updateMutation.isPending ? t.common.loading : t.common.save}
               </Button>
             </DialogFooter>
           </form>

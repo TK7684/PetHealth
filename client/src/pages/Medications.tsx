@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CalendarIcon, Clock, Edit, Plus, Trash2, AlertCircle } from "lucide-react";
 import { format, formatDistanceToNow, isAfter, addDays } from "date-fns";
-import { th } from "date-fns/locale";
+import { th, enUS } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,22 +16,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const medicationTypeLabels = {
-  flea_tick: "ยากำจัดเห็บหมัด",
-  deworming: "ยาถ่ายพยาธิ",
-  other: "ยาอื่นๆ"
-};
-
-const frequencyOptions = [
-  { value: "monthly", label: "รายเดือน" },
-  { value: "quarterly", label: "ราย 3 เดือน" },
-  { value: "biannually", label: "ราย 6 เดือน" },
-  { value: "annually", label: "รายปี" },
-  { value: "custom", label: "กำหนดเอง" }
-];
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function Medications() {
+  const { t, lang } = useI18n();
+  const dateLocale = lang === "th" ? th : enUS;
+
+  const medicationTypeLabels: Record<string, string> = {
+    flea_tick: t.medications.fleaTick,
+    deworming: t.medications.deworming,
+    other: t.medications.other
+  };
+
+  const frequencyOptions = [
+    { value: "monthly", label: lang === "th" ? "รายเดือน" : "Monthly" },
+    { value: "quarterly", label: lang === "th" ? "ราย 3 เดือน" : "Quarterly" },
+    { value: "biannually", label: lang === "th" ? "ราย 6 เดือน" : "Biannually" },
+    { value: "annually", label: lang === "th" ? "รายปี" : "Annually" },
+    { value: "custom", label: lang === "th" ? "กำหนดเอง" : "Custom" }
+  ];
+
   const [activeTab, setActiveTab] = useState("active");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -64,7 +68,7 @@ export default function Medications() {
   const createMutation = useMutation({
     mutationFn: (data: any) => api.medications.create.mutate(data),
     onSuccess: () => {
-      toast.success("เพิ่มยาสำเร็จแล้ว");
+      toast.success(t.success.saved);
       setAddDialogOpen(false);
       setFormData({
         petId: 0,
@@ -79,7 +83,7 @@ export default function Medications() {
       });
     },
     onError: (error) => {
-      toast.error(`เพิ่มยาไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "เพิ่มยาไม่สำเร็จ" : "Failed to add medication"}: ${error.message}`);
     },
   });
 
@@ -87,21 +91,21 @@ export default function Medications() {
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       api.medications.update.mutate({ medicationId: id, ...data }),
     onSuccess: () => {
-      toast.success("อัพเดทข้อมูลยาสำเร็จแล้ว");
+      toast.success(t.success.updated);
       setEditDialogOpen(false);
     },
     onError: (error) => {
-      toast.error(`อัพเดทข้อมูลยาไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "อัพเดทข้อมูลยาไม่สำเร็จ" : "Failed to update medication"}: ${error.message}`);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.medications.delete.mutate({ medicationId: id }),
     onSuccess: () => {
-      toast.success("ลบยาสำเร็จแล้ว");
+      toast.success(t.success.deleted);
     },
     onError: (error) => {
-      toast.error(`ลบยาไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "ลบยาไม่สำเร็จ" : "Failed to delete medication"}: ${error.message}`);
     },
   });
 
@@ -109,7 +113,7 @@ export default function Medications() {
     e.preventDefault();
 
     if (!formData.petId || !formData.medicationName || !formData.lastGivenDate) {
-      toast.error("กรุณากรอกข้อมูลที่จำเป็นทั้งหมด");
+      toast.error(lang === "th" ? "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด" : "Please fill in all required fields");
       return;
     }
 
@@ -172,7 +176,7 @@ export default function Medications() {
   };
 
   const handleDelete = (id: number) => {
-    if (window.confirm("คุณแน่ใจหรือไม่ที่จะลบข้อมูลยานี้?")) {
+    if (window.confirm(lang === "th" ? "คุณแน่ใจหรือไม่ที่จะลบข้อมูลยานี้?" : "Are you sure you want to delete this medication?")) {
       deleteMutation.mutate(id);
     }
   };
@@ -193,35 +197,35 @@ export default function Medications() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">บันทึกการให้ยา</h1>
-          <p className="text-muted-foreground">จัดการการให้ยาเห็บหมัดและยาถ่ายพยาธิ</p>
+          <h1 className="text-3xl font-bold">{t.medications.title}</h1>
+          <p className="text-muted-foreground">{lang === "th" ? "จัดการการให้ยาเห็บหมัดและยาถ่ายพยาธิ" : "Manage flea/tick and deworming medications"}</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              เพิ่มบันทึกยา
+              {t.medications.addNew}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>เพิ่มบันทึกการให้ยา</DialogTitle>
+                <DialogTitle>{t.medications.addNew}</DialogTitle>
                 <DialogDescription>
-                  บันทึกข้อมูลการให้ยาเพื่อติดตามและแจ้งเตือน
+                  {lang === "th" ? "บันทึกข้อมูลการให้ยาเพื่อติดตามและแจ้งเตือน" : "Record medication information for tracking and reminders"}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="pet" className="text-right">
-                    สัตว์เลี้ยง
+                    {lang === "th" ? "สัตว์เลี้ยง" : "Pet"}
                   </Label>
                   <Select
                     value={formData.petId.toString()}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, petId: parseInt(value) }))}
                   >
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+                      <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select a pet"} />
                     </SelectTrigger>
                     <SelectContent>
                       {pets?.map((pet) => (
@@ -234,7 +238,7 @@ export default function Medications() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="medicationType" className="text-right">
-                    ประเภทยา
+                    {t.medications.medicationType}
                   </Label>
                   <Select
                     value={formData.medicationType}
@@ -254,7 +258,7 @@ export default function Medications() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="medicationName" className="text-right">
-                    ชื่อยา
+                    {t.medications.medicationName}
                   </Label>
                   <Input
                     id="medicationName"
@@ -265,7 +269,7 @@ export default function Medications() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="lastGivenDate" className="text-right">
-                    วันที่ให้ยาล่าสุด
+                    {t.medications.lastGivenDate}
                   </Label>
                   <Input
                     id="lastGivenDate"
@@ -277,7 +281,7 @@ export default function Medications() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="frequency" className="text-right">
-                    ความถี่
+                    {t.medications.frequency}
                   </Label>
                   <Select
                     value={formData.frequency}
@@ -297,7 +301,7 @@ export default function Medications() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="nextDueDate" className="text-right">
-                    วันที่ครบกำหนดถัดไป
+                    {t.medications.nextDueDate}
                   </Label>
                   <Input
                     id="nextDueDate"
@@ -309,19 +313,19 @@ export default function Medications() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="dosage" className="text-right">
-                    ขนาดยา
+                    {t.medications.dosage}
                   </Label>
                   <Input
                     id="dosage"
                     value={formData.dosage}
                     onChange={(e) => setFormData(prev => ({ ...prev, dosage: e.target.value }))}
                     className="col-span-3"
-                    placeholder="เช่น 1 เม็ด"
+                    placeholder={lang === "th" ? "เช่น 1 เม็ด" : "e.g. 1 tablet"}
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="reminderEnabled" className="text-right">
-                    เปิดการแจ้งเตือน
+                    {t.medications.reminderEnabled}
                   </Label>
                   <div className="col-span-3 flex items-center space-x-2">
                     <Switch
@@ -329,12 +333,12 @@ export default function Medications() {
                       checked={formData.reminderEnabled}
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, reminderEnabled: checked }))}
                     />
-                    <Label htmlFor="reminderEnabled">รับการแจ้งเตือนก่อนวันครบกำหนด</Label>
+                    <Label htmlFor="reminderEnabled">{lang === "th" ? "รับการแจ้งเตือนก่อนวันครบกำหนด" : "Receive reminder before due date"}</Label>
                   </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="notes" className="text-right">
-                    บันทึกเพิ่มเติม
+                    {t.common.notes}
                   </Label>
                   <Textarea
                     id="notes"
@@ -347,7 +351,7 @@ export default function Medications() {
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+                  {createMutation.isPending ? t.common.loading : t.common.save}
                 </Button>
               </DialogFooter>
             </form>
@@ -357,8 +361,8 @@ export default function Medications() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="active">ใช้งานอยู่</TabsTrigger>
-          <TabsTrigger value="expired">หมดอายุ/หมดกำหนด</TabsTrigger>
+          <TabsTrigger value="active">{lang === "th" ? "ใช้งานอยู่" : "Active"}</TabsTrigger>
+          <TabsTrigger value="expired">{lang === "th" ? "หมดอายุ/หมดกำหนด" : "Expired/Overdue"}</TabsTrigger>
         </TabsList>
         <TabsContent value="active" className="space-y-4">
           {medicationsLoading ? (
@@ -385,7 +389,7 @@ export default function Medications() {
                     <div className="absolute top-2 right-2">
                       <Badge variant="destructive" className="flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        หมดกำหนด
+                        {t.medications.overdue}
                       </Badge>
                     </div>
                   )}
@@ -404,16 +408,16 @@ export default function Medications() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                        <span>ให้ครั้งล่าสุด: {format(new Date(med.lastGivenDate), "d MMMM yyyy", { locale: th })}</span>
+                        <span>{lang === "th" ? "ให้ครั้งล่าสุด" : "Last given"}: {format(new Date(med.lastGivenDate), "d MMMM yyyy", { locale: dateLocale })}</span>
                       </div>
                       {med.nextDueDate && (
                         <div className={`flex items-center gap-2 text-sm ${isOverdue(med.nextDueDate) ? "text-red-600" : ""}`}>
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            ครบกำหนด: {format(new Date(med.nextDueDate), "d MMMM yyyy", { locale: th })}
+                            {lang === "th" ? "ครบกำหนด" : "Due"}: {format(new Date(med.nextDueDate), "d MMMM yyyy", { locale: dateLocale })}
                             {isOverdue(med.nextDueDate) && (
                               <span className="ml-1">
-                                ({formatDistanceToNow(new Date(med.nextDueDate), { addSuffix: true, locale: th })})
+                                ({formatDistanceToNow(new Date(med.nextDueDate), { addSuffix: true, locale: dateLocale })})
                               </span>
                             )}
                           </span>
@@ -421,17 +425,17 @@ export default function Medications() {
                       )}
                       {med.dosage && (
                         <div className="text-sm">
-                          <span className="font-medium">ขนาดยา:</span> {med.dosage}
+                          <span className="font-medium">{t.medications.dosage}:</span> {med.dosage}
                         </div>
                       )}
                       {med.frequency && (
                         <div className="text-sm">
-                          <span className="font-medium">ความถี่:</span> {frequencyOptions.find(f => f.value === med.frequency)?.label || med.frequency}
+                          <span className="font-medium">{t.medications.frequency}:</span> {frequencyOptions.find(f => f.value === med.frequency)?.label || med.frequency}
                         </div>
                       )}
                       {med.notes && (
                         <div className="text-sm">
-                          <span className="font-medium">หมายเหตุ:</span> {med.notes}
+                          <span className="font-medium">{t.common.notes}:</span> {med.notes}
                         </div>
                       )}
                     </div>
@@ -442,7 +446,7 @@ export default function Medications() {
                         onClick={() => handleEdit(med)}
                       >
                         <Edit className="h-4 w-4 mr-1" />
-                        แก้ไข
+                        {t.common.edit}
                       </Button>
                       <Button
                         variant="outline"
@@ -450,7 +454,7 @@ export default function Medications() {
                         onClick={() => handleDelete(med.id)}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        ลบ
+                        {t.common.delete}
                       </Button>
                     </div>
                   </CardContent>
@@ -460,9 +464,9 @@ export default function Medications() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>ไม่มีข้อมูลยา</CardTitle>
+                <CardTitle>{lang === "th" ? "ไม่มีข้อมูลยา" : "No medications"}</CardTitle>
                 <CardDescription>
-                  คุณยังไม่ได้เพิ่มข้อมูลยาใดๆ คลิกปุ่ม "เพิ่มบันทึกยา" เพื่อเริ่มต้น
+                  {lang === "th" ? `คุณยังไม่ได้เพิ่มข้อมูลยาใดๆ คลิกปุ่ม "${t.medications.addNew}" เพื่อเริ่มต้น` : `You haven't added any medications yet. Click "${t.medications.addNew}" to get started`}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -494,7 +498,7 @@ export default function Medications() {
                   <div className="absolute top-2 right-2">
                     <Badge variant="destructive" className="flex items-center gap-1">
                       <AlertCircle className="h-3 w-3" />
-                      หมดกำหนด
+                      {t.medications.overdue}
                     </Badge>
                   </div>
                   <CardHeader>
@@ -512,27 +516,27 @@ export default function Medications() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                        <span>ให้ครั้งล่าสุด: {format(new Date(med.lastGivenDate), "d MMMM yyyy", { locale: th })}</span>
+                        <span>{lang === "th" ? "ให้ครั้งล่าสุด" : "Last given"}: {format(new Date(med.lastGivenDate), "d MMMM yyyy", { locale: dateLocale })}</span>
                       </div>
                       {med.nextDueDate && (
                         <div className="flex items-center gap-2 text-sm text-red-600">
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            ครบกำหนด: {format(new Date(med.nextDueDate), "d MMMM yyyy", { locale: th })}
+                            {lang === "th" ? "ครบกำหนด" : "Due"}: {format(new Date(med.nextDueDate), "d MMMM yyyy", { locale: dateLocale })}
                             <span className="ml-1">
-                              ({formatDistanceToNow(new Date(med.nextDueDate), { addSuffix: true, locale: th })})
+                              ({formatDistanceToNow(new Date(med.nextDueDate), { addSuffix: true, locale: dateLocale })})
                             </span>
                           </span>
                         </div>
                       )}
                       {med.dosage && (
                         <div className="text-sm">
-                          <span className="font-medium">ขนาดยา:</span> {med.dosage}
+                          <span className="font-medium">{t.medications.dosage}:</span> {med.dosage}
                         </div>
                       )}
                       {med.frequency && (
                         <div className="text-sm">
-                          <span className="font-medium">ความถี่:</span> {frequencyOptions.find(f => f.value === med.frequency)?.label || med.frequency}
+                          <span className="font-medium">{t.medications.frequency}:</span> {frequencyOptions.find(f => f.value === med.frequency)?.label || med.frequency}
                         </div>
                       )}
                     </div>
@@ -543,7 +547,7 @@ export default function Medications() {
                         onClick={() => handleEdit(med)}
                       >
                         <Edit className="h-4 w-4 mr-1" />
-                        แก้ไข
+                        {t.common.edit}
                       </Button>
                       <Button
                         variant="outline"
@@ -551,7 +555,7 @@ export default function Medications() {
                         onClick={() => handleDelete(med.id)}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        ลบ
+                        {t.common.delete}
                       </Button>
                     </div>
                   </CardContent>
@@ -561,9 +565,9 @@ export default function Medications() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>ไม่มียาที่หมดกำหนด</CardTitle>
+                <CardTitle>{lang === "th" ? "ไม่มียาที่หมดกำหนด" : "No overdue medications"}</CardTitle>
                 <CardDescription>
-                  ไม่มียาที่หมดกำหนดในขณะนี้
+                  {lang === "th" ? "ไม่มียาที่หมดกำหนดในขณะนี้" : "No overdue medications at this time"}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -576,15 +580,15 @@ export default function Medications() {
         <DialogContent className="sm:max-w-[500px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle>แก้ไขข้อมูลยา</DialogTitle>
+              <DialogTitle>{t.medications.editMedication}</DialogTitle>
               <DialogDescription>
-                แก้ไขข้อมูลการให้ยาเพื่อติดตามและแจ้งเตือน
+                {lang === "th" ? "แก้ไขข้อมูลการให้ยาเพื่อติดตามและแจ้งเตือน" : "Edit medication information for tracking and reminders"}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-medicationType" className="text-right">
-                  ประเภทยา
+                  {t.medications.medicationType}
                 </Label>
                 <Select
                   value={formData.medicationType}
@@ -604,7 +608,7 @@ export default function Medications() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-medicationName" className="text-right">
-                  ชื่อยา
+                  {t.medications.medicationName}
                 </Label>
                 <Input
                   id="edit-medicationName"
@@ -615,7 +619,7 @@ export default function Medications() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-lastGivenDate" className="text-right">
-                  วันที่ให้ยาล่าสุด
+                  {t.medications.lastGivenDate}
                 </Label>
                 <Input
                   id="edit-lastGivenDate"
@@ -627,7 +631,7 @@ export default function Medications() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-frequency" className="text-right">
-                  ความถี่
+                  {t.medications.frequency}
                 </Label>
                 <Select
                   value={formData.frequency}
@@ -647,7 +651,7 @@ export default function Medications() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-nextDueDate" className="text-right">
-                  วันที่ครบกำหนดถัดไป
+                  {t.medications.nextDueDate}
                 </Label>
                 <Input
                   id="edit-nextDueDate"
@@ -659,19 +663,19 @@ export default function Medications() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-dosage" className="text-right">
-                  ขนาดยา
+                  {t.medications.dosage}
                 </Label>
                 <Input
                   id="edit-dosage"
                   value={formData.dosage}
                   onChange={(e) => setFormData(prev => ({ ...prev, dosage: e.target.value }))}
                   className="col-span-3"
-                  placeholder="เช่น 1 เม็ด"
+                  placeholder={lang === "th" ? "เช่น 1 เม็ด" : "e.g. 1 tablet"}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-reminderEnabled" className="text-right">
-                  เปิดการแจ้งเตือน
+                  {t.medications.reminderEnabled}
                 </Label>
                 <div className="col-span-3 flex items-center space-x-2">
                   <Switch
@@ -679,12 +683,12 @@ export default function Medications() {
                     checked={formData.reminderEnabled}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, reminderEnabled: checked }))}
                   />
-                  <Label htmlFor="edit-reminderEnabled">รับการแจ้งเตือนก่อนวันครบกำหนด</Label>
+                  <Label htmlFor="edit-reminderEnabled">{lang === "th" ? "รับการแจ้งเตือนก่อนวันครบกำหนด" : "Receive reminder before due date"}</Label>
                 </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-notes" className="text-right">
-                  บันทึกเพิ่มเติม
+                  {t.common.notes}
                 </Label>
                 <Textarea
                   id="edit-notes"
@@ -697,7 +701,7 @@ export default function Medications() {
             </div>
             <DialogFooter>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
+                {updateMutation.isPending ? t.common.loading : (lang === "th" ? "บันทึกการแก้ไข" : "Save Changes")}
               </Button>
             </DialogFooter>
           </form>

@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CalendarIcon, FileText, Paperclip, Plus, Trash2 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { th } from "date-fns/locale";
+import { th, enUS } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,15 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const recordTypeLabels: Record<string, string> = {
-  checkup: "ตรวจสุขภาพ",
-  vaccination: "การฉีดวัคซีน",
-  lab: "ผลแล็บ/เลือด",
-  surgery: "การผ่าตัด",
-  emergency: "ฉุกเฉิน",
-  other: "อื่นๆ",
-};
+import { useI18n } from "@/contexts/I18nContext";
 
 const recordTypeColors: Record<string, string> = {
   checkup: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -34,6 +26,18 @@ const recordTypeColors: Record<string, string> = {
 };
 
 export default function HealthRecords() {
+  const { t, lang } = useI18n();
+  const dateLocale = lang === "th" ? th : enUS;
+
+  const recordTypeLabels: Record<string, string> = {
+    checkup: lang === "th" ? "ตรวจสุขภาพ" : "Checkup",
+    vaccination: lang === "th" ? "การฉีดวัคซีน" : "Vaccination",
+    lab: lang === "th" ? "ผลแล็บ/เลือด" : "Lab/Blood Test",
+    surgery: t.healthRecords.surgery,
+    emergency: t.healthRecords.emergency,
+    other: t.healthRecords.other,
+  };
+
   const [selectedPetId, setSelectedPetId] = useState<number>(0);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -63,7 +67,7 @@ export default function HealthRecords() {
         ...data,
       }),
     onSuccess: () => {
-      toast.success("เพิ่มบันทึกสุขภาพสำเร็จแล้ว");
+      toast.success(t.success.saved);
       setAddDialogOpen(false);
       setFormData({
         recordType: "checkup",
@@ -72,7 +76,7 @@ export default function HealthRecords() {
       });
     },
     onError: (error) => {
-      toast.error(`เพิ่มบันทึกไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "เพิ่มบันทึกไม่สำเร็จ" : "Failed to add record"}: ${error.message}`);
     },
   });
 
@@ -80,12 +84,12 @@ export default function HealthRecords() {
     mutationFn: (recordId: number) =>
       api.healthRecords.delete.mutate({ recordId }),
     onSuccess: () => {
-      toast.success("ลบบันทึกสุขภาพสำเร็จแล้ว");
+      toast.success(t.success.deleted);
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
     },
     onError: (error) => {
-      toast.error(`ลบบันทึกไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "ลบบันทึกไม่สำเร็จ" : "Failed to delete record"}: ${error.message}`);
     },
   });
 
@@ -93,7 +97,7 @@ export default function HealthRecords() {
     e.preventDefault();
 
     if (!selectedPetId || !formData.date || !formData.recordType) {
-      toast.error("กรุณากรอกข้อมูลที่จำเป็นทั้งหมด");
+      toast.error(lang === "th" ? "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด" : "Please fill in all required fields");
       return;
     }
 
@@ -119,28 +123,28 @@ export default function HealthRecords() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">บันทึกสุขภาพ</h1>
-          <p className="text-muted-foreground">ติดตามประวัติการรักษาและสุขภาพของสัตว์เลี้ยง</p>
+          <h1 className="text-3xl font-bold">{t.healthRecords.title}</h1>
+          <p className="text-muted-foreground">{lang === "th" ? "ติดตามประวัติการรักษาและสุขภาพของสัตว์เลี้ยง" : "Track your pet's medical history and health"}</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
             <Button disabled={selectedPetId === 0}>
               <Plus className="mr-2 h-4 w-4" />
-              เพิ่มบันทึกสุขภาพ
+              {t.healthRecords.addNew}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>เพิ่มบันทึกสุขภาพ</DialogTitle>
+                <DialogTitle>{t.healthRecords.addNew}</DialogTitle>
                 <DialogDescription>
-                  บันทึกข้อมูลสุขภาพเพื่อติดตามประวัติการรักษา
+                  {lang === "th" ? "บันทึกข้อมูลสุขภาพเพื่อติดตามประวัติการรักษา" : "Record health information to track medical history"}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="recordType" className="text-right">
-                    ประเภทบันทึก
+                    {t.healthRecords.recordType}
                   </Label>
                   <Select
                     value={formData.recordType}
@@ -162,7 +166,7 @@ export default function HealthRecords() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="date" className="text-right">
-                    วันที่
+                    {t.common.date}
                   </Label>
                   <Input
                     id="date"
@@ -176,7 +180,7 @@ export default function HealthRecords() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="notes" className="text-right">
-                    หมายเหตุ
+                    {t.common.notes}
                   </Label>
                   <Textarea
                     id="notes"
@@ -186,13 +190,13 @@ export default function HealthRecords() {
                     }
                     className="col-span-3"
                     rows={3}
-                    placeholder="รายละเอียดเพิ่มเติม เช่น อาการ, การวินิจฉัย, การรักษา..."
+                    placeholder={lang === "th" ? "รายละเอียดเพิ่มเติม เช่น อาการ, การวินิจฉัย, การรักษา..." : "Additional details, e.g. symptoms, diagnosis, treatment..."}
                   />
                 </div>
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+                  {createMutation.isPending ? t.common.loading : t.common.save}
                 </Button>
               </DialogFooter>
             </form>
@@ -204,7 +208,7 @@ export default function HealthRecords() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <Label className="font-medium whitespace-nowrap">เลือกสัตว์เลี้ยง:</Label>
+            <Label className="font-medium whitespace-nowrap">{lang === "th" ? "เลือกสัตว์เลี้ยง:" : "Select pet:"}</Label>
             {petsLoading ? (
               <Skeleton className="h-10 w-60" />
             ) : (
@@ -213,7 +217,7 @@ export default function HealthRecords() {
                 onValueChange={(value) => setSelectedPetId(parseInt(value))}
               >
                 <SelectTrigger className="w-60">
-                  <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+                  <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select a pet"} />
                 </SelectTrigger>
                 <SelectContent>
                   {pets?.map((pet) => (
@@ -232,9 +236,9 @@ export default function HealthRecords() {
       {selectedPetId === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>เลือกสัตว์เลี้ยง</CardTitle>
+            <CardTitle>{lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select a pet"}</CardTitle>
             <CardDescription>
-              กรุณาเลือกสัตว์เลี้ยงจากเมนูด้านบนเพื่อดูบันทึกสุขภาพ
+              {lang === "th" ? "กรุณาเลือกสัตว์เลี้ยงจากเมนูด้านบนเพื่อดูบันทึกสุขภาพ" : "Please select a pet from the menu above to view health records"}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -273,10 +277,10 @@ export default function HealthRecords() {
                 <div className="flex flex-col items-center w-[90px] shrink-0 pt-4">
                   <div className="absolute left-[86px] top-6 h-3 w-3 rounded-full bg-primary border-2 border-background z-10" />
                   <span className="text-sm font-medium text-muted-foreground">
-                    {format(new Date(record.date), "d MMMM yyyy", { locale: th })}
+                    {format(new Date(record.date), "d MMMM yyyy", { locale: dateLocale })}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(record.date), { addSuffix: true, locale: th })}
+                    {formatDistanceToNow(new Date(record.date), { addSuffix: true, locale: dateLocale })}
                   </span>
                 </div>
 
@@ -296,7 +300,7 @@ export default function HealthRecords() {
                         {record.attachmentUrl && (
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Paperclip className="h-4 w-4" />
-                            <span>มีไฟล์แนบ</span>
+                            <span>{lang === "th" ? "มีไฟล์แนบ" : "Has attachment"}</span>
                           </div>
                         )}
                         <Button
@@ -327,10 +331,10 @@ export default function HealthRecords() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              ไม่มีบันทึกสุขภาพ
+              {lang === "th" ? "ไม่มีบันทึกสุขภาพ" : "No health records"}
             </CardTitle>
             <CardDescription>
-              ยังไม่มีบันทึกสุขภาพสำหรับสัตว์เลี้ยงตัวนี้ คลิกปุ่ม "เพิ่มบันทึกสุขภาพ" เพื่อเริ่มต้น
+              {lang === "th" ? `ยังไม่มีบันทึกสุขภาพสำหรับสัตว์เลี้ยงตัวนี้ คลิกปุ่ม "${t.healthRecords.addNew}" เพื่อเริ่มต้น` : `No health records for this pet yet. Click "${t.healthRecords.addNew}" to get started`}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -340,17 +344,17 @@ export default function HealthRecords() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>ยืนยันการลบบันทึกสุขภาพ</DialogTitle>
+            <DialogTitle>{lang === "th" ? "ยืนยันการลบบันทึกสุขภาพ" : "Confirm Delete"}</DialogTitle>
             <DialogDescription>
-              คุณแน่ใจหรือไม่ที่จะลบบันทึกสุขภาพนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              {lang === "th" ? "คุณแน่ใจหรือไม่ที่จะลบบันทึกสุขภาพนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้" : "Are you sure you want to delete this health record? This action cannot be undone."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              ยกเลิก
+              {t.common.cancel}
             </Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? "กำลังลบ..." : "ลบ"}
+              {deleteMutation.isPending ? (lang === "th" ? "กำลังลบ..." : "Deleting...") : t.common.delete}
             </Button>
           </DialogFooter>
         </DialogContent>

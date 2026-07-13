@@ -10,8 +10,10 @@ import { PawPrint, Plus, Trash2, Edit } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function Pets() {
+  const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const [editingPet, setEditingPet] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -28,7 +30,7 @@ export default function Pets() {
   const createMutation = trpc.pets.create.useMutation({
     onSuccess: () => {
       utils.pets.list.invalidate();
-      toast.success("Pet added successfully!");
+      toast.success(t.success.saved);
       setOpen(false);
       resetForm();
     },
@@ -40,7 +42,7 @@ export default function Pets() {
   const updateMutation = trpc.pets.update.useMutation({
     onSuccess: () => {
       utils.pets.list.invalidate();
-      toast.success("Pet updated successfully!");
+      toast.success(t.success.updated);
       setOpen(false);
       resetForm();
     },
@@ -52,7 +54,7 @@ export default function Pets() {
   const deleteMutation = trpc.pets.delete.useMutation({
     onSuccess: () => {
       utils.pets.list.invalidate();
-      toast.success("Pet deleted successfully!");
+      toast.success(t.success.deleted);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -89,7 +91,7 @@ export default function Pets() {
   };
 
   const handleDelete = (petId: number) => {
-    if (confirm("Are you sure you want to delete this pet?")) {
+    if (confirm(t.pets.confirmDelete)) {
       deleteMutation.mutate({ petId });
     }
   };
@@ -102,9 +104,9 @@ export default function Pets() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">My Pets</h1>
+            <h1 className="text-3xl font-bold text-foreground">{t.pets.title}</h1>
             <p className="text-muted-foreground mt-1">
-              Manage your pets and their information
+              {lang === 'th' ? 'จัดการสัตว์เลี้ยงและข้อมูลของพวกเขา' : 'Manage your pets and their information'}
             </p>
           </div>
           <Dialog open={open} onOpenChange={(isOpen) => {
@@ -114,20 +116,20 @@ export default function Pets() {
             <DialogTrigger asChild>
               <Button size="lg" className="gap-2" disabled={!canAddMore}>
                 <Plus className="h-5 w-5" />
-                Add Pet
+                {t.dashboard.addPet}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
-                  <DialogTitle>{editingPet ? "Edit Pet" : "Add New Pet"}</DialogTitle>
+                  <DialogTitle>{editingPet ? t.pets.editPet : t.pets.addNew}</DialogTitle>
                   <DialogDescription>
-                    {editingPet ? "Update your pet's information" : "Add a new pet to your account"}
+                    {editingPet ? (lang === 'th' ? 'อัพเดทข้อมูลสัตว์เลี้ยงของคุณ' : "Update your pet's information") : (lang === 'th' ? 'เพิ่มสัตว์เลี้ยงใหม่ในบัญชีของคุณ' : 'Add a new pet to your account')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
+                    <Label htmlFor="name">{t.pets.name} *</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -136,7 +138,7 @@ export default function Pets() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="breed">Breed</Label>
+                    <Label htmlFor="breed">{t.pets.breed}</Label>
                     <Input
                       id="breed"
                       value={formData.breed}
@@ -144,7 +146,7 @@ export default function Pets() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="birthDate">Birth Date</Label>
+                    <Label htmlFor="birthDate">{t.pets.birthDate}</Label>
                     <Input
                       id="birthDate"
                       type="date"
@@ -153,7 +155,7 @@ export default function Pets() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
+                    <Label htmlFor="gender">{t.pets.gender}</Label>
                     <Select
                       value={formData.gender}
                       onValueChange={(value: "male" | "female" | "unknown") =>
@@ -164,9 +166,9 @@ export default function Pets() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="unknown">Unknown</SelectItem>
+                        <SelectItem value="male">{t.pets.male}</SelectItem>
+                        <SelectItem value="female">{t.pets.female}</SelectItem>
+                        <SelectItem value="unknown">{t.pets.unknown}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -180,10 +182,10 @@ export default function Pets() {
                       resetForm();
                     }}
                   >
-                    Cancel
+                    {t.common.cancel}
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                    {editingPet ? "Update" : "Add"} Pet
+                    {editingPet ? t.common.edit : t.common.add} {t.pets.title.replace(lang === 'th' ? 'ของฉัน' : 'My', '').trim()}
                   </Button>
                 </DialogFooter>
               </form>
@@ -194,21 +196,21 @@ export default function Pets() {
         {!canAddMore && (
           <Card className="border-primary/50 bg-primary/5">
             <CardHeader>
-              <CardTitle className="text-primary">Free Tier Limit Reached</CardTitle>
+              <CardTitle className="text-primary">{t.pets.limitReached}</CardTitle>
               <CardDescription>
-                You've reached the maximum of 1 pet on the free tier. Upgrade to Premium for unlimited pets.
+                {t.pets.limitReachedDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/subscription">
-                <Button variant="default">Upgrade to Premium</Button>
+                <Button variant="default">{t.subscription.upgradeNow}</Button>
               </Link>
             </CardContent>
           </Card>
         )}
 
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading your pets...</div>
+          <div className="text-center py-12 text-muted-foreground">{t.common.loading}</div>
         ) : pets && pets.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {pets.map((pet) => (
@@ -230,7 +232,7 @@ export default function Pets() {
                       <div>
                         <CardTitle>{pet.name}</CardTitle>
                         <CardDescription>
-                          {pet.breed || "Unknown breed"}
+                          {pet.breed || (lang === 'th' ? 'ไม่ระบุสายพันธุ์' : 'Unknown breed')}
                         </CardDescription>
                       </div>
                     </div>
@@ -255,25 +257,25 @@ export default function Pets() {
                 <CardContent>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Gender:</span>
+                      <span className="text-muted-foreground">{t.pets.gender}:</span>
                       <span className="font-medium capitalize">{pet.gender}</span>
                     </div>
                     {pet.birthDate && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Age:</span>
+                        <span className="text-muted-foreground">{t.pets.age}:</span>
                         <span className="font-medium">
-                          {Math.floor(
-                            (Date.now() - new Date(pet.birthDate).getTime()) /
-                              (1000 * 60 * 60 * 24 * 365)
-                          )}{" "}
-                          years old
+                            {Math.floor(
+                              (Date.now() - new Date(pet.birthDate).getTime()) /
+                                (1000 * 60 * 60 * 24 * 365)
+                            )}{" "}
+                            {lang === 'th' ? 'ปี' : 'years old'}
                         </span>
                       </div>
                     )}
                   </div>
                   <Link href={`/pets/${pet.id}`}>
                     <Button className="w-full mt-4" variant="outline">
-                      View Profile
+                      {lang === 'th' ? 'ดูโปรไฟล์' : 'View Profile'}
                     </Button>
                   </Link>
                 </CardContent>
@@ -284,13 +286,13 @@ export default function Pets() {
           <Card>
             <CardContent className="py-12 text-center">
               <PawPrint className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No pets yet</h3>
+              <h3 className="text-xl font-semibold mb-2">{t.dashboard.noPetsYet}</h3>
               <p className="text-muted-foreground mb-6">
-                Add your first pet to start tracking their health and wellness
+                {t.dashboard.addFirstPet}
               </p>
               <Button onClick={() => setOpen(true)} size="lg">
                 <Plus className="h-5 w-5 mr-2" />
-                Add Your First Pet
+                {t.dashboard.addYourFirstPet}
               </Button>
             </CardContent>
           </Card>

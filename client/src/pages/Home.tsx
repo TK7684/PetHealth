@@ -20,8 +20,10 @@ import {
   Calendar,
 } from "lucide-react";
 import { Link } from "wouter";
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function Home() {
+  const { t, lang } = useI18n();
   const { data: pets, isLoading: petsLoading } = trpc.pets.list.useQuery();
   const { data: subscription } = trpc.subscriptions.get.useQuery();
 
@@ -35,16 +37,16 @@ export default function Home() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
-              ยินดีต้อนรับสู่ PetHealth
+              {t.dashboard.welcome}
             </h1>
             <p className="text-muted-foreground mt-1">
-              จัดการสุขภาพ วัคซีน และอื่นๆ ของสัตว์เลี้ยงของคุณ
+              {t.dashboard.subtitle}
             </p>
           </div>
           <Link href="/pets">
             <Button size="lg" className="gap-2">
               <Plus className="h-5 w-5" />
-              เพิ่มสัตว์เลี้ยง
+              {t.dashboard.addPet}
             </Button>
           </Link>
         </div>
@@ -54,16 +56,15 @@ export default function Home() {
           <Card className="border-primary/50 bg-primary/5">
             <CardHeader>
               <CardTitle className="text-primary">
-                อัพเกรดเป็น Premium
+                {t.dashboard.upgradeToPremium}
               </CardTitle>
               <CardDescription>
-                ปลดล็อกสัตว์เลี้ยงไม่จำกัด, ติดตามค่าใช้จ่าย,
-                และการจัดการดูแลสัตว์ป่วย
+                {t.dashboard.upgradeDescription}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/subscription">
-                <Button variant="default">อัพเกรดตอนนี้</Button>
+                <Button variant="default">{t.dashboard.upgradeNow}</Button>
               </Link>
             </CardContent>
           </Card>
@@ -74,7 +75,7 @@ export default function Home() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                สัตว์เลี้ยงทั้งหมด
+                {t.dashboard.totalPets}
               </CardTitle>
               <PawPrint className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -83,7 +84,7 @@ export default function Home() {
                 {petsLoading ? "..." : pets?.length || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {tier === "free" ? "สูงสุด 1 ตัวในแผนฟรี" : "ไม่จำกัด"}
+                {tier === "free" ? t.dashboard.maxOnFreeTier : (lang === 'th' ? 'ไม่จำกัด' : 'Unlimited')}
               </p>
             </CardContent>
           </Card>
@@ -91,27 +92,27 @@ export default function Home() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                บันทึกสุขภาพ
+                {t.dashboard.healthRecords}
               </CardTitle>
               <Heart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">-</div>
               <p className="text-xs text-muted-foreground">
-                {tier === "free" ? "10/เดือน ในแผนฟรี" : "ไม่จำกัด"}
+                {tier === "free" ? t.dashboard.perMonthOnFreeTier : (lang === 'th' ? 'ไม่จำกัด' : 'Unlimited')}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">วัคซีน</CardTitle>
+              <CardTitle className="text-sm font-medium">{t.dashboard.vaccinations}</CardTitle>
               <Syringe className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">-</div>
               <p className="text-xs text-muted-foreground">
-                ติดตามวันที่กำลังจะถึง
+                {t.dashboard.trackUpcomingDates}
               </p>
             </CardContent>
           </Card>
@@ -119,14 +120,14 @@ export default function Home() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {isPremium ? "ค่าใช้จ่าย" : "ฟีเจอร์ Premium"}
+                {isPremium ? t.expenses.title : t.dashboard.premiumFeature}
               </CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{isPremium ? "-" : "🔒"}</div>
               <p className="text-xs text-muted-foreground">
-                {isPremium ? "ติดตามการใช้จ่าย" : "อัพเกรดเพื่อปลดล็อก"}
+                {isPremium ? (lang === 'th' ? 'ติดตามการใช้จ่าย' : 'Track spending') : t.dashboard.upgradeToUnlock}
               </p>
             </CardContent>
           </Card>
@@ -134,10 +135,10 @@ export default function Home() {
 
         {/* Pets List */}
         <div>
-          <h2 className="text-2xl font-semibold mb-4">สัตว์เลี้ยงของคุณ</h2>
+          <h2 className="text-2xl font-semibold mb-4">{t.dashboard.yourPets}</h2>
           {petsLoading ? (
             <div className="text-center py-8 text-muted-foreground">
-              กำลังโหลด...
+              {t.common.loading}
             </div>
           ) : pets && pets.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -160,9 +161,9 @@ export default function Home() {
                         <div>
                           <CardTitle>{pet.name}</CardTitle>
                           <CardDescription>
-                            {pet.breed || "ไม่ระบุสายพันธุ์"}
+                            {pet.breed || (lang === 'th' ? 'ไม่ระบุสายพันธุ์' : 'Unknown breed')}
                             {pet.birthDate &&
-                              ` • ${Math.floor((Date.now() - new Date(pet.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 365))} ปี`}
+                              ` • ${Math.floor((Date.now() - new Date(pet.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 365))} ${t.pets.years}`}
                           </CardDescription>
                         </div>
                       </div>
@@ -176,15 +177,15 @@ export default function Home() {
               <CardContent className="py-12 text-center">
                 <PawPrint className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">
-                  ยังไม่มีสัตว์เลี้ยง
+                  {t.dashboard.noPetsYet}
                 </h3>
                 <p className="text-muted-foreground mb-4">
-                  เพิ่มสัตว์เลี้ยงตัวแรกของคุณเพื่อเริ่มติดตามสุขภาพ
+                  {t.dashboard.addFirstPet}
                 </p>
                 <Link href="/pets">
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
-                    เพิ่มสัตว์เลี้ยงตัวแรกของคุณ
+                    {t.dashboard.addYourFirstPet}
                   </Button>
                 </Link>
               </CardContent>
@@ -197,7 +198,7 @@ export default function Home() {
 
         {/* Quick Actions */}
         <div>
-          <h2 className="text-2xl font-semibold mb-4">การดำเนินการด่วน</h2>
+          <h2 className="text-2xl font-semibold mb-4">{t.dashboard.quickActions}</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Link href="/health-records">
               <Card className="hover:shadow-lg transition-shadow cursor-pointer">
@@ -207,9 +208,9 @@ export default function Home() {
                       <Heart className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">บันทึกสุขภาพ</CardTitle>
+                      <CardTitle className="text-base">{t.healthRecords.title}</CardTitle>
                       <CardDescription>
-                        ติดตามประวัติทางการแพทย์
+                        {t.dashboard.trackMedicalHistory}
                       </CardDescription>
                     </div>
                   </div>
@@ -225,8 +226,8 @@ export default function Home() {
                       <Syringe className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">วัคซีน</CardTitle>
-                      <CardDescription>จัดการตารางวัคซีน</CardDescription>
+                      <CardTitle className="text-base">{t.vaccinations.title}</CardTitle>
+                      <CardDescription>{t.dashboard.manageVaccineSchedule}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -241,9 +242,9 @@ export default function Home() {
                       <TrendingUp className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">ติดตามน้ำหนัก</CardTitle>
+                      <CardTitle className="text-base">{t.weightTracking.title}</CardTitle>
                       <CardDescription>
-                        ติดตามแนวโน้มการเจริญเติบโต
+                        {t.dashboard.monitorGrowthTrends}
                       </CardDescription>
                     </div>
                   </div>
@@ -259,9 +260,9 @@ export default function Home() {
                       <Pill className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">ยาและการรักษา</CardTitle>
+                      <CardTitle className="text-base">{t.medications.title}</CardTitle>
                       <CardDescription>
-                        ติดตามการให้ยาเห็บหมัดและยาถ่ายพยาธิ
+                        {lang === 'th' ? 'ติดตามการให้ยาเห็บหมัดและยาถ่ายพยาธิ' : 'Track flea/tick and deworming medication'}
                       </CardDescription>
                     </div>
                   </div>
@@ -277,9 +278,9 @@ export default function Home() {
                       <Calendar className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">กิจกรรมรายวัน</CardTitle>
+                      <CardTitle className="text-base">{t.dailyActivities.title}</CardTitle>
                       <CardDescription>
-                        บันทึกกิจกรรมประจำวันและแชร์ไปยัง Instagram
+                        {lang === 'th' ? 'บันทึกกิจกรรมประจำวันและแชร์ไปยัง Instagram' : 'Log daily activities and share to Instagram'}
                       </CardDescription>
                     </div>
                   </div>

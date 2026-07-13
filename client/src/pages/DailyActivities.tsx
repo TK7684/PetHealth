@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CalendarIcon, Clock, MapPin, Instagram, Edit, Plus, Trash2, Camera, Link2 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { th } from "date-fns/locale";
+import { th, enUS } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,20 +16,24 @@ import { api } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageUpload } from "@/components/ImageUpload";
-
-const activityTypeOptions = [
-  { value: "walk", label: "เดินเล่น" },
-  { value: "play", label: "เล่น" },
-  { value: "training", label: "ฝึกสอน" },
-  { value: "grooming", label: "อาบน้ำ/ตัดขน" },
-  { value: "social", label: "สังสรรค์กับสัตว์อื่น" },
-  { value: "meal", label: "มื้ออาหาร" },
-  { value: "trip", label: "เที่ยว/ท่องเที่ยว" },
-  { value: "health_check", label: "ตรวจสุขภาพ" },
-  { value: "other", label: "อื่นๆ" }
-];
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function DailyActivities() {
+  const { t, lang } = useI18n();
+  const dateLocale = lang === "th" ? th : enUS;
+
+  const activityTypeOptions = [
+    { value: "walk", label: t.dailyActivities.walk },
+    { value: "play", label: t.dailyActivities.play },
+    { value: "training", label: t.dailyActivities.training },
+    { value: "grooming", label: t.dailyActivities.grooming },
+    { value: "social", label: lang === "th" ? "สังสรรค์กับสัตว์อื่น" : "Socializing" },
+    { value: "meal", label: lang === "th" ? "มื้ออาหาร" : "Meal" },
+    { value: "trip", label: lang === "th" ? "เที่ยว/ท่องเที่ยว" : "Trip/Outing" },
+    { value: "health_check", label: t.dailyActivities.vet },
+    { value: "other", label: t.dailyActivities.other },
+  ];
+
   const [activeTab, setActiveTab] = useState("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -62,7 +66,7 @@ export default function DailyActivities() {
   const createMutation = useMutation({
     mutationFn: (data: any) => api.dailyActivities.create.mutate(data),
     onSuccess: () => {
-      toast.success("เพิ่มกิจกรรมสำเร็จแล้ว");
+      toast.success(t.success.saved);
       setAddDialogOpen(false);
       setFormData({
         petId: 0,
@@ -78,7 +82,7 @@ export default function DailyActivities() {
       setUploadedImages([]);
     },
     onError: (error) => {
-      toast.error(`เพิ่มกิจกรรมไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "เพิ่มกิจกรรมไม่สำเร็จ" : "Failed to add activity"}: ${error.message}`);
     },
   });
 
@@ -86,21 +90,21 @@ export default function DailyActivities() {
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       api.dailyActivities.update.mutate({ activityId: id, ...data }),
     onSuccess: () => {
-      toast.success("อัพเดทข้อมูลกิจกรรมสำเร็จแล้ว");
+      toast.success(t.success.updated);
       setEditDialogOpen(false);
     },
     onError: (error) => {
-      toast.error(`อัพเดทข้อมูลกิจกรรมไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "อัพเดทข้อมูลกิจกรรมไม่สำเร็จ" : "Failed to update activity"}: ${error.message}`);
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.dailyActivities.delete.mutate({ activityId: id }),
     onSuccess: () => {
-      toast.success("ลบกิจกรรมสำเร็จแล้ว");
+      toast.success(t.success.deleted);
     },
     onError: (error) => {
-      toast.error(`ลบกิจกรรมไม่สำเร็จ: ${error.message}`);
+      toast.error(`${lang === "th" ? "ลบกิจกรรมไม่สำเร็จ" : "Failed to delete activity"}: ${error.message}`);
     },
   });
 
@@ -108,7 +112,7 @@ export default function DailyActivities() {
     e.preventDefault();
 
     if (!formData.petId || !formData.description) {
-      toast.error("กรุณากรอกข้อมูลที่จำเป็นทั้งหมด");
+      toast.error(lang === "th" ? "กรุณากรอกข้อมูลที่จำเป็นทั้งหมด" : "Please fill in all required fields");
       return;
     }
 
@@ -158,7 +162,7 @@ export default function DailyActivities() {
   };
 
   const handleDelete = (id: number) => {
-    if (window.confirm("คุณแน่ใจหรือไม่ที่จะลบกิจกรรมนี้?")) {
+    if (window.confirm(lang === "th" ? "คุณแน่ใจหรือไม่ที่จะลบกิจกรรมนี้?" : "Are you sure you want to delete this activity?")) {
       deleteMutation.mutate(id);
     }
   };
@@ -182,35 +186,35 @@ export default function DailyActivities() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">บันทึกกิจกรรมรายวัน</h1>
-          <p className="text-muted-foreground">บันทึกกิจกรรมประจำวันและแชร์ไปยัง Instagram</p>
+          <h1 className="text-3xl font-bold">{t.dailyActivities.title}</h1>
+          <p className="text-muted-foreground">{lang === "th" ? "บันทึกกิจกรรมประจำวันและแชร์ไปยัง Instagram" : "Log daily activities and share to Instagram"}</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              เพิ่มกิจกรรม
+              {t.dailyActivities.addNew}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>เพิ่มกิจกรรมใหม่</DialogTitle>
+                <DialogTitle>{t.dailyActivities.addNew}</DialogTitle>
                 <DialogDescription>
-                  บันทึกกิจกรรมที่สัตว์เลี้ยงของคุณทำในแต่ละวัน
+                  {lang === "th" ? "บันทึกกิจกรรมที่สัตว์เลี้ยงของคุณทำในแต่ละวัน" : "Record activities your pet does each day"}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="pet" className="text-right">
-                    สัตว์เลี้ยง
+                    {lang === "th" ? "สัตว์เลี้ยง" : "Pet"}
                   </Label>
                   <Select
                     value={formData.petId.toString()}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, petId: parseInt(value) }))}
                   >
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="เลือกสัตว์เลี้ยง" />
+                      <SelectValue placeholder={lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select pet"} />
                     </SelectTrigger>
                     <SelectContent>
                       {pets?.map((pet) => (
@@ -223,7 +227,7 @@ export default function DailyActivities() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="date" className="text-right">
-                    วันที่
+                    {t.common.date}
                   </Label>
                   <Input
                     id="date"
@@ -235,7 +239,7 @@ export default function DailyActivities() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="activityType" className="text-right">
-                    ประเภทกิจกรรม
+                    {t.dailyActivities.activityType}
                   </Label>
                   <Select
                     value={formData.activityType}
@@ -255,7 +259,7 @@ export default function DailyActivities() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="description" className="text-right">
-                    คำอธิบาย
+                    {t.dailyActivities.description}
                   </Label>
                   <Textarea
                     id="description"
@@ -263,12 +267,12 @@ export default function DailyActivities() {
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     className="col-span-3"
                     rows={2}
-                    placeholder="อธิบายเกี่ยวกับกิจกรรมนี้"
+                    placeholder={lang === "th" ? "อธิบายเกี่ยวกับกิจกรรมนี้" : "Describe this activity"}
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="duration" className="text-right">
-                    ระยะเวลา (นาที)
+                    {t.dailyActivities.duration} ({t.dailyActivities.minutes})
                   </Label>
                   <Input
                     id="duration"
@@ -281,19 +285,19 @@ export default function DailyActivities() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="location" className="text-right">
-                    สถานที่
+                    {t.dailyActivities.location}
                   </Label>
                   <Input
                     id="location"
                     value={formData.location}
                     onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                     className="col-span-3"
-                    placeholder="สวนสาธารณะ, บ้าน, เป็นต้น"
+                    placeholder={lang === "th" ? "สวนสาธารณะ, บ้าน, เป็นต้น" : "Park, Home, etc."}
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="instagramPostUrl" className="text-right">
-                    ลิงก์ Instagram
+                    {lang === "th" ? "ลิงก์ Instagram" : "Instagram Link"}
                   </Label>
                   <Input
                     id="instagramPostUrl"
@@ -305,7 +309,7 @@ export default function DailyActivities() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">
-                    รูปภาพ
+                    {t.dailyActivities.photos}
                   </Label>
                   <div className="col-span-3">
                     <ImageUpload
@@ -317,7 +321,7 @@ export default function DailyActivities() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="notes" className="text-right">
-                    บันทึกเพิ่มเติม
+                    {t.common.notes}
                   </Label>
                   <Textarea
                     id="notes"
@@ -325,13 +329,13 @@ export default function DailyActivities() {
                     onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                     className="col-span-3"
                     rows={2}
-                    placeholder="บันทึกอื่นๆ ที่อยากจดจำ"
+                    placeholder={lang === "th" ? "บันทึกอื่นๆ ที่อยากจดจำ" : "Other notes to remember"}
                   />
                 </div>
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+                  {createMutation.isPending ? t.common.loading : t.common.save}
                 </Button>
               </DialogFooter>
             </form>
@@ -341,9 +345,9 @@ export default function DailyActivities() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all">ทั้งหมด</TabsTrigger>
-          <TabsTrigger value="recent">ล่าสุด (7 วัน)</TabsTrigger>
-          <TabsTrigger value="instagram">มี Instagram</TabsTrigger>
+          <TabsTrigger value="all">{t.common.all}</TabsTrigger>
+          <TabsTrigger value="recent">{lang === "th" ? "ล่าสุด (7 วัน)" : "Recent (7 days)"}</TabsTrigger>
+          <TabsTrigger value="instagram">{lang === "th" ? "มี Instagram" : "Has Instagram"}</TabsTrigger>
         </TabsList>
         <TabsContent value={activeTab} className="space-y-4">
           {activitiesLoading ? (
@@ -384,7 +388,7 @@ export default function DailyActivities() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                        <span>{format(new Date(activity.date), "d MMMM yyyy", { locale: th })}</span>
+                        <span>{format(new Date(activity.date), "d MMMM yyyy", { locale: dateLocale })}</span>
                       </div>
                       <div className="text-sm">
                         <p>{activity.description}</p>
@@ -392,19 +396,19 @@ export default function DailyActivities() {
                       {activity.duration && (
                         <div className="flex items-center gap-2 text-sm">
                           <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>ระยะเวลา: {activity.duration} นาที</span>
+                          <span>{t.dailyActivities.duration}: {activity.duration} {t.dailyActivities.minutes}</span>
                         </div>
                       )}
                       {activity.location && (
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>สถานที่: {activity.location}</span>
+                          <span>{t.dailyActivities.location}: {activity.location}</span>
                         </div>
                       )}
                       {activity.photoUrls && JSON.parse(activity.photoUrls).length > 0 && (
                         <div className="flex items-center gap-2 text-sm">
                           <Camera className="h-4 w-4 text-muted-foreground" />
-                          <span>มีรูปภาพ {JSON.parse(activity.photoUrls).length} ภาพ</span>
+                          <span>{t.dailyActivities.photos} {JSON.parse(activity.photoUrls).length}</span>
                         </div>
                       )}
                       {activity.instagramPostUrl && (
@@ -416,13 +420,13 @@ export default function DailyActivities() {
                             rel="noopener noreferrer"
                             className="text-blue-500 hover:underline"
                           >
-                            ดูใน Instagram
+                            {lang === "th" ? "ดูใน Instagram" : "View on Instagram"}
                           </a>
                         </div>
                       )}
                       {activity.notes && (
                         <div className="text-sm">
-                          <span className="font-medium">หมายเหตุ:</span> {activity.notes}
+                          <span className="font-medium">{t.common.notes}:</span> {activity.notes}
                         </div>
                       )}
                     </div>
@@ -433,7 +437,7 @@ export default function DailyActivities() {
                         onClick={() => handleEdit(activity)}
                       >
                         <Edit className="h-4 w-4 mr-1" />
-                        แก้ไข
+                        {t.common.edit}
                       </Button>
                       <Button
                         variant="outline"
@@ -441,7 +445,7 @@ export default function DailyActivities() {
                         onClick={() => handleDelete(activity.id)}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
-                        ลบ
+                        {t.common.delete}
                       </Button>
                     </div>
                   </CardContent>
@@ -451,9 +455,9 @@ export default function DailyActivities() {
           ) : (
             <Card>
               <CardHeader>
-                <CardTitle>ไม่มีข้อมูลกิจกรรม</CardTitle>
+                <CardTitle>{t.common.noData}</CardTitle>
                 <CardDescription>
-                  คุณยังไม่ได้เพิ่มกิจกรรมใดๆ คลิกปุ่ม "เพิ่มกิจกรรม" เพื่อเริ่มต้น
+                  {lang === "th" ? `คุณยังไม่ได้เพิ่มกิจกรรมใดๆ คลิกปุ่ม "${t.dailyActivities.addNew}" เพื่อเริ่มต้น` : `You haven't added any activities yet. Click "${t.dailyActivities.addNew}" to get started.`}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -466,15 +470,15 @@ export default function DailyActivities() {
         <DialogContent className="sm:max-w-[600px]">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
-              <DialogTitle>แก้ไขข้อมูลกิจกรรม</DialogTitle>
+              <DialogTitle>{t.dailyActivities.editActivity}</DialogTitle>
               <DialogDescription>
-                แก้ไขข้อมูลกิจกรรมที่คุณได้บันทึกไว้
+                {lang === "th" ? "แก้ไขข้อมูลกิจกรรมที่คุณได้บันทึกไว้" : "Edit your recorded activity details"}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-activityType" className="text-right">
-                  ประเภทกิจกรรม
+                  {t.dailyActivities.activityType}
                 </Label>
                 <Select
                   value={formData.activityType}
@@ -494,7 +498,7 @@ export default function DailyActivities() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-date" className="text-right">
-                  วันที่
+                  {t.common.date}
                 </Label>
                 <Input
                   id="edit-date"
@@ -506,7 +510,7 @@ export default function DailyActivities() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-description" className="text-right">
-                  คำอธิบาย
+                  {t.dailyActivities.description}
                 </Label>
                 <Textarea
                   id="edit-description"
@@ -514,12 +518,12 @@ export default function DailyActivities() {
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="col-span-3"
                   rows={2}
-                  placeholder="อธิบายเกี่ยวกับกิจกรรมนี้"
+                  placeholder={lang === "th" ? "อธิบายเกี่ยวกับกิจกรรมนี้" : "Describe this activity"}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-duration" className="text-right">
-                  ระยะเวลา (นาที)
+                  {t.dailyActivities.duration} ({t.dailyActivities.minutes})
                 </Label>
                 <Input
                   id="edit-duration"
@@ -532,19 +536,19 @@ export default function DailyActivities() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-location" className="text-right">
-                  สถานที่
+                  {t.dailyActivities.location}
                 </Label>
                 <Input
                   id="edit-location"
                   value={formData.location}
                   onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                   className="col-span-3"
-                  placeholder="สวนสาธารณะ, บ้าน, เป็นต้น"
+                  placeholder={lang === "th" ? "สวนสาธารณะ, บ้าน, เป็นต้น" : "Park, Home, etc."}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-instagramPostUrl" className="text-right">
-                  ลิงก์ Instagram
+                  {lang === "th" ? "ลิงก์ Instagram" : "Instagram Link"}
                 </Label>
                 <Input
                   id="edit-instagramPostUrl"
@@ -556,7 +560,7 @@ export default function DailyActivities() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">
-                  รูปภาพ
+                  {t.dailyActivities.photos}
                 </Label>
                 <div className="col-span-3">
                   <ImageUpload
@@ -568,7 +572,7 @@ export default function DailyActivities() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-notes" className="text-right">
-                  บันทึกเพิ่มเติม
+                  {t.common.notes}
                 </Label>
                 <Textarea
                   id="edit-notes"
@@ -576,13 +580,13 @@ export default function DailyActivities() {
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                   className="col-span-3"
                   rows={2}
-                  placeholder="บันทึกอื่นๆ ที่อยากจดจำ"
+                  placeholder={lang === "th" ? "บันทึกอื่นๆ ที่อยากจดจำ" : "Other notes to remember"}
                 />
               </div>
             </div>
             <DialogFooter>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
+                {updateMutation.isPending ? t.common.loading : t.common.save}
               </Button>
             </DialogFooter>
           </form>
