@@ -1,22 +1,77 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
+import {
+  registerUser,
+  loginUser,
+  createSessionToken,
+} from "./_core/auth";
 import { NotificationService } from "./notifications";
 
 export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+
+    register: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(6),
+          name: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const user = await registerUser(input.email, input.password, input.name);
+          const token = await createSessionToken(user.openId, {
+            name: user.name || "",
+            expiresInMs: ONE_YEAR_MS,
+          });
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+          return { success: true, user };
+        } catch (error: any) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: error.message || "Registration failed",
+          });
+        }
+      }),
+
+    login: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const user = await loginUser(input.email, input.password);
+          const token = await createSessionToken(user.openId, {
+            name: user.name || "",
+            expiresInMs: ONE_YEAR_MS,
+          });
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+          return { success: true, user };
+        } catch (error: any) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: error.message || "Login failed",
+          });
+        }
+      }),
+
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
+      return { success: true } as const;
     }),
   }),
 
@@ -642,7 +697,7 @@ export const appRouter = router({
           nextDueDate: z.date().optional(),
           dosage: z.string().optional(),
           frequency: z.string().optional(),
-          reminderEnabled: z.boolean().default(true),
+          reminderEnabled: z.number().default(1),
           notes: z.string().optional(),
         })
       )
@@ -667,7 +722,7 @@ export const appRouter = router({
           nextDueDate: z.date().optional(),
           dosage: z.string().optional(),
           frequency: z.string().optional(),
-          reminderEnabled: z.boolean(),
+          reminderEnabled: z.number(),
           notes: z.string().optional(),
         })
       )
@@ -812,19 +867,13 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        // Generate a unique file name
+        // MVP: Return placeholder URLs (S3 upload is a post-MVP feature)
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 15);
         const extension = input.fileName.split(".").pop();
-        const uniqueFileName = `${input.folder || "uploads"}/${timestamp}-${randomString}.${extension}`;
+        const fileUrl = `/uploads/${input.folder || "uploads"}/${timestamp}-${randomString}.${extension}`;
 
-        // Get upload URL from S3 storage
-        const { uploadUrl, fileUrl } = await db.getUploadUrl(
-          uniqueFileName,
-          input.fileType
-        );
-
-        return { uploadUrl, fileUrl };
+        return { uploadUrl: fileUrl, fileUrl };
       }),
   }),
 

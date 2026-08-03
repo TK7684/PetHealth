@@ -13,7 +13,8 @@
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "deploy": "npm run build:workers && wrangler deploy --no-bundle",
-    "deploy:prod": "npm run build:workers && wrangler deploy --env production --no-bundle"
+    "deploy:prod": "npm run build:workers && wrangler deploy --env production --no-bundle",
+    "db:init": "wrangler d1 execute pethealth-db --file=./drizzle/d1_schema.sql"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -87,6 +88,7 @@
   },
   "devDependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",
+    "@cloudflare/workers-types": "^5.20260801.1",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.3",
     "@types/express": "4.17.21",

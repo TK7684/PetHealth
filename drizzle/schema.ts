@@ -1,235 +1,207 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
+ * Core user table — email/password auth (replaced Manus OAuth).
  */
-export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  openId: text("openId").notNull().unique(),
   name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  email: text("email").unique(),
+  passwordHash: text("passwordHash"),
+  loginMethod: text("loginMethod"),
+  role: text("role", { enum: ["user", "admin"] }).default("user").notNull(),
+  stripeCustomerId: text("stripeCustomerId"),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  lastSignedIn: integer("lastSignedIn", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-/**
- * Pet information table
- */
-export const pets = mysqlTable("pets", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  name: varchar("name", { length: 100 }).notNull(),
-  breed: varchar("breed", { length: 100 }),
-  birthDate: timestamp("birthDate"),
+/** Pet information */
+export const pets = sqliteTable("pets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  name: text("name").notNull(),
+  breed: text("breed"),
+  birthDate: integer("birthDate", { mode: "timestamp" }),
   photoUrl: text("photoUrl"),
-  gender: mysqlEnum("gender", ["male", "female", "unknown"]).default("unknown"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  gender: text("gender", { enum: ["male", "female", "unknown"] }).default("unknown"),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type Pet = typeof pets.$inferSelect;
 export type InsertPet = typeof pets.$inferInsert;
 
-/**
- * Health records table - Enhanced with detailed vet visit information
- */
-export const healthRecords = mysqlTable("health_records", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  recordType: varchar("recordType", { length: 50 }).notNull(),
-  date: timestamp("date").notNull(),
-  // Vet visit details
+/** Health records — vet visit details */
+export const healthRecords = sqliteTable("health_records", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  recordType: text("recordType").notNull(),
+  date: integer("date", { mode: "timestamp" }).notNull(),
   symptoms: text("symptoms"),
   diagnosis: text("diagnosis"),
-  vetName: varchar("vetName", { length: 200 }),
-  clinicName: varchar("clinicName", { length: 200 }),
-  cost: int("cost"),
-  medications: text("medications"), // JSON string of medications prescribed
-  nextAppointment: timestamp("nextAppointment"),
-  photoUrls: text("photoUrls"), // JSON array of photo URLs
+  vetName: text("vetName"),
+  clinicName: text("clinicName"),
+  cost: integer("cost"),
+  medications: text("medications"),
+  nextAppointment: integer("nextAppointment", { mode: "timestamp" }),
+  photoUrls: text("photoUrls"),
   notes: text("notes"),
   attachmentUrl: text("attachmentUrl"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type HealthRecord = typeof healthRecords.$inferSelect;
 export type InsertHealthRecord = typeof healthRecords.$inferInsert;
 
-/**
- * Vaccinations table
- */
-export const vaccinations = mysqlTable("vaccinations", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  vaccineName: varchar("vaccineName", { length: 100 }).notNull(),
-  lastDate: timestamp("lastDate").notNull(),
-  nextDate: timestamp("nextDate"),
-  reminderEnabled: int("reminderEnabled").default(1).notNull(),
+/** Vaccinations */
+export const vaccinations = sqliteTable("vaccinations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  vaccineName: text("vaccineName").notNull(),
+  lastDate: integer("lastDate", { mode: "timestamp" }).notNull(),
+  nextDate: integer("nextDate", { mode: "timestamp" }),
+  reminderEnabled: integer("reminderEnabled").default(1).notNull(),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type Vaccination = typeof vaccinations.$inferSelect;
 export type InsertVaccination = typeof vaccinations.$inferInsert;
 
-/**
- * Behavior logs table
- */
-export const behaviorLogs = mysqlTable("behavior_logs", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  date: timestamp("date").notNull(),
-  behaviorType: varchar("behaviorType", { length: 50 }).notNull(),
+/** Behavior logs */
+export const behaviorLogs = sqliteTable("behavior_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  behaviorType: text("behaviorType").notNull(),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type BehaviorLog = typeof behaviorLogs.$inferSelect;
 export type InsertBehaviorLog = typeof behaviorLogs.$inferInsert;
 
-/**
- * Weight records table
- */
-export const weightRecords = mysqlTable("weight_records", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  date: timestamp("date").notNull(),
-  weight: int("weight").notNull(),
-  unit: varchar("unit", { length: 10 }).default("kg").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+/** Weight records */
+export const weightRecords = sqliteTable("weight_records", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  weight: integer("weight").notNull(),
+  unit: text("unit").default("kg").notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type WeightRecord = typeof weightRecords.$inferSelect;
 export type InsertWeightRecord = typeof weightRecords.$inferInsert;
 
-/**
- * Expenses table (Premium feature)
- */
-export const expenses = mysqlTable("expenses", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  date: timestamp("date").notNull(),
-  category: varchar("category", { length: 50 }).notNull(),
-  amount: int("amount").notNull(),
+/** Expenses (Premium) */
+export const expenses = sqliteTable("expenses", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  category: text("category").notNull(),
+  amount: integer("amount").notNull(),
   description: text("description"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = typeof expenses.$inferInsert;
 
-/**
- * Feeding schedules table
- */
-export const feedingSchedules = mysqlTable("feeding_schedules", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  foodType: varchar("foodType", { length: 100 }).notNull(),
-  amount: varchar("amount", { length: 50 }).notNull(),
-  frequency: varchar("frequency", { length: 50 }).notNull(),
-  time: varchar("time", { length: 50 }),
+/** Feeding schedules */
+export const feedingSchedules = sqliteTable("feeding_schedules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  foodType: text("foodType").notNull(),
+  amount: text("amount").notNull(),
+  frequency: text("frequency").notNull(),
+  time: text("time"),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type FeedingSchedule = typeof feedingSchedules.$inferSelect;
 export type InsertFeedingSchedule = typeof feedingSchedules.$inferInsert;
 
-/**
- * Sick care logs table (Premium feature)
- */
-export const sickCareLogs = mysqlTable("sick_care_logs", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  startDate: timestamp("startDate").notNull(),
-  endDate: timestamp("endDate"),
+/** Sick care logs (Premium) */
+export const sickCareLogs = sqliteTable("sick_care_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  startDate: integer("startDate", { mode: "timestamp" }).notNull(),
+  endDate: integer("endDate", { mode: "timestamp" }),
   symptoms: text("symptoms").notNull(),
   medications: text("medications"),
-  status: mysqlEnum("status", ["ongoing", "recovered", "monitoring"]).default("ongoing").notNull(),
+  status: text("status", { enum: ["ongoing", "recovered", "monitoring"] }).default("ongoing").notNull(),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type SickCareLog = typeof sickCareLogs.$inferSelect;
 export type InsertSickCareLog = typeof sickCareLogs.$inferInsert;
 
-/**
- * Subscriptions table for tier management
- */
-export const subscriptions = mysqlTable("subscriptions", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
-  tier: mysqlEnum("tier", ["free", "premium"]).default("free").notNull(),
-  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
-  stripePriceId: varchar("stripePriceId", { length: 255 }),
-  startDate: timestamp("startDate").defaultNow().notNull(),
-  endDate: timestamp("endDate"),
-  status: mysqlEnum("status", ["active", "expired", "cancelled"]).default("active").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+/** Subscriptions */
+export const subscriptions = sqliteTable("subscriptions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull().unique(),
+  tier: text("tier", { enum: ["free", "premium"] }).default("free").notNull(),
+  stripeSubscriptionId: text("stripeSubscriptionId"),
+  stripePriceId: text("stripePriceId"),
+  startDate: integer("startDate", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  endDate: integer("endDate", { mode: "timestamp" }),
+  status: text("status", { enum: ["active", "expired", "cancelled"] }).default("active").notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = typeof subscriptions.$inferInsert;
 
-/**
- * Medications table - Flea/Tick and Deworming tracking
- */
-export const medications = mysqlTable("medications", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  medicationType: mysqlEnum("medicationType", ["flea_tick", "deworming", "other"]).notNull(),
-  medicationName: varchar("medicationName", { length: 200 }).notNull(),
-  lastGivenDate: timestamp("lastGivenDate").notNull(),
-  nextDueDate: timestamp("nextDueDate"),
-  dosage: varchar("dosage", { length: 100 }),
-  frequency: varchar("frequency", { length: 100 }),
-  reminderEnabled: int("reminderEnabled").default(1).notNull(),
+/** Medications — flea/tick, deworming */
+export const medications = sqliteTable("medications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  medicationType: text("medicationType", { enum: ["flea_tick", "deworming", "other"] }).notNull(),
+  medicationName: text("medicationName").notNull(),
+  lastGivenDate: integer("lastGivenDate", { mode: "timestamp" }).notNull(),
+  nextDueDate: integer("nextDueDate", { mode: "timestamp" }),
+  dosage: text("dosage"),
+  frequency: text("frequency"),
+  reminderEnabled: integer("reminderEnabled").default(1).notNull(),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type Medication = typeof medications.$inferSelect;
 export type InsertMedication = typeof medications.$inferInsert;
 
-/**
- * Daily activities table with Instagram integration
- */
-export const dailyActivities = mysqlTable("daily_activities", {
-  id: int("id").autoincrement().primaryKey(),
-  petId: int("petId").notNull(),
-  date: timestamp("date").notNull(),
-  activityType: varchar("activityType", { length: 100 }).notNull(),
+/** Daily activities with Instagram integration */
+export const dailyActivities = sqliteTable("daily_activities", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  activityType: text("activityType").notNull(),
   description: text("description"),
-  photoUrls: text("photoUrls"), // JSON array of photo URLs
-  instagramPostUrl: varchar("instagramPostUrl", { length: 500 }),
-  duration: int("duration"), // in minutes
-  location: varchar("location", { length: 200 }),
+  photoUrls: text("photoUrls"),
+  instagramPostUrl: text("instagramPostUrl"),
+  duration: integer("duration"),
+  location: text("location"),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type DailyActivity = typeof dailyActivities.$inferSelect;

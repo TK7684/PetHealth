@@ -1,7 +1,6 @@
 import { build } from 'esbuild';
 
-// All Node.js built-in module names that need to be stubbed for CF Workers
-// Using --no-bundle, so we cannot rely on nodejs_compat providing these at runtime
+// Node.js built-in modules that need stubbing for CF Workers
 const NODE_BUILTINS = [
   'assert', 'buffer', 'child_process', 'cluster', 'console', 'constants',
   'crypto', 'dgram', 'dns', 'domain', 'events', 'fs', 'http', 'http2',
@@ -18,37 +17,12 @@ build({
   platform: 'node',
   outfile: 'workers/index.js',
   target: 'es2022',
-  // Only externalize packages that are truly incompatible or loaded dynamically
+  // Externalize packages that can't be bundled or are dynamically loaded
   external: [
-    'mysql2',
+    'mysql2',  // still referenced by old code paths, will tree-shake
   ],
-  // Use plugins to handle dynamic imports and mark incompatible packages as external
-  // IMPORTANT: Plugins run in order - stubs must come BEFORE the general external handler
   plugins: [{
-    // Stub drizzle-orm/mysql2 - must run FIRST
-    name: 'stub-drizzle-mysql2',
-    setup(build) {
-      build.onResolve({ filter: /^drizzle-orm\/mysql2$/ }, (args) => {
-        return {
-          path: args.path,
-          namespace: 'drizzle-mysql2-stub',
-        };
-      });
-
-      build.onLoad({ filter: /.*/, namespace: 'drizzle-mysql2-stub' }, () => {
-        return {
-          contents: `
-            export function drizzle() {
-              throw new Error("MySQL (drizzle-orm/mysql2) is not supported in Cloudflare Workers. Please migrate to Cloudflare D1 (SQLite) using drizzle-orm/d1. See WORKERS_DATABASE.md for instructions.");
-            }
-            export default drizzle;
-          `,
-          loader: 'js',
-        };
-      });
-    },
-  }, {
-    // Stub ALL Node.js built-in modules — they're not available in CF Workers
+    // Stub ALL Node.js built-in modules — not available in CF Workers
     name: 'stub-node-builtins',
     setup(build) {
       const builtinsPattern = new RegExp('^(' + NODE_BUILTINS.join('|') + ')$');
@@ -63,7 +37,6 @@ build({
       });
 
       build.onLoad({ filter: /.*/, namespace: 'node-stub' }, (args) => {
-        // Provide meaningful stubs for commonly-used modules
         const modName = args.path.replace(/^node:/, '');
         if (modName === 'crypto') {
           return {
@@ -181,26 +154,13 @@ build({
         if (modName === 'zlib') {
           return {
             contents: `
-              const zconstants = {
-                Z_NO_FLUSH: 0, Z_PARTIAL_FLUSH: 1, Z_SYNC_FLUSH: 2,
-                Z_FULL_FLUSH: 3, Z_FINISH: 4, Z_BLOCK: 5, Z_TREES: 6,
-                BROTLI_OPERATION_FLUSH: 1, BROTLI_OPERATION_PROCESS: 0,
-                BROTLI_OPERATION_EMIT_METADATA: 2,
-              };
               const noop = () => ({ on: () => ({ on: () => {} }), pipe: () => ({ on: () => {} }) });
               export const createGzip = noop;
               export const createGunzip = noop;
               export const createDeflate = noop;
               export const createInflate = noop;
-              export const createDeflateRaw = noop;
-              export const createInflateRaw = noop;
-              export const createBrotliCompress = noop;
-              export const createBrotliDecompress = noop;
-              export const unzip = (_b, cb) => cb && cb(null, _b);
-              export const deflate = (_b, cb) => cb && cb(null, _b);
-              export const inflate = (_b, cb) => cb && cb(null, _b);
-              export const constants = zconstants;
-              export default { constants: zconstants, createGzip, createGunzip, createDeflate, createInflate };
+              export const constants = {};
+              export default { createGzip, createGunzip, createDeflate, createInflate };
             `,
             loader: 'js',
           };
@@ -212,16 +172,6 @@ build({
               export const ok = (cond, msg) => { if (!cond) throw new Error(msg || 'Assertion failed'); };
               export const equal = (a, b) => { if (a !== b) throw new Error('Expected equal'); };
               export const strictEqual = equal;
-            `,
-            loader: 'js',
-          };
-        }
-        if (modName === 'string_decoder') {
-          return {
-            contents: `
-              class StringDecoder { write(b) { return String(b); } end() { return ''; } }
-              export { StringDecoder };
-              export default { StringDecoder };
             `,
             loader: 'js',
           };
@@ -240,12 +190,7 @@ build({
         }
         // Generic stub for everything else
         return {
-          contents: `
-            export default {};
-            export const Readable = class {};
-            export const Writable = class {};
-            export const EventEmitter = class { on() { return this; } emit() { return false; } };
-          `,
+          contents: `export default {};`,
           loader: 'js',
         };
       });
@@ -253,28 +198,22 @@ build({
   }, {
     name: 'handle-dynamic-imports',
     setup(build) {
-      build.onResolve({ filter: /.*/ }, (args) => {
-        // Stub AWS SDK packages — not available on CF Workers
-        if (args.path.startsWith('@aws-sdk/')) {
+      // Stub AWS SDK packages — not available on CF Workers
+      build.onResolve({ filter: /^@aws-sdk\// }, (args) => {
+        return { path: args.path, namespace: 'module-stub' };
+      });
+      // Stub storage and stripe modules (post-MVP, dynamically imported)
+      build.onResolve({ filter: /\/storage$|\/stripe$/ }, (args) => {
+        if (args.path.includes('server') || args.path.startsWith('../server')) {
           return { path: args.path, namespace: 'module-stub' };
         }
-        // Stub storage and stripe modules
-        if (args.path.includes('/storage') && (args.path.includes('server') || args.path.startsWith('../server'))) {
-          return { path: args.path, namespace: 'module-stub' };
-        }
-        if (args.path.includes('/stripe') && (args.path.includes('server') || args.path.startsWith('../server'))) {
-          return { path: args.path, namespace: 'module-stub' };
-        }
-        // mysql2 stays external
-        if (args.path === 'mysql2' || args.path.startsWith('mysql2/')) {
-          return { external: true };
-        }
-        return undefined;
+      });
+      // mysql2 stays external (tree-shaken, never called in D1 path)
+      build.onResolve({ filter: /^mysql2/ }, (args) => {
+        return { external: true };
       });
 
-      // Stub modules with named exports that match common imports
       build.onLoad({ filter: /.*/, namespace: 'module-stub' }, (args) => {
-        // AWS SDK stubs
         if (args.path.startsWith('@aws-sdk/client-s3')) {
           return {
             contents: `
@@ -282,7 +221,6 @@ build({
               export class PutObjectCommand { constructor() {} }
               export class GetObjectCommand { constructor() {} }
               export class DeleteObjectCommand { constructor() {} }
-              export class ListObjectsCommand { constructor() {} }
             `,
             loader: 'js',
           };
@@ -293,13 +231,8 @@ build({
             loader: 'js',
           };
         }
-        // Generic stub
-        return {
-          contents: 'export {};',
-          loader: 'js',
-        };
+        return { contents: 'export {};', loader: 'js' };
       });
     },
   }],
 }).catch(() => process.exit(1));
-

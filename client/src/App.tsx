@@ -20,6 +20,8 @@ import LandingPage from "./pages/LandingPage";
 
 import Medications from "./pages/Medications";
 import DailyActivities from "./pages/DailyActivities";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 
 function Router() {
   return (
@@ -38,6 +40,8 @@ function Router() {
       <Route path={"/pets/:id"} component={PetProfile} />
       <Route path={"/subscription"} component={Subscription} />
       <Route path={"/landing"} component={LandingPage} />
+      <Route path={"/login"} component={Login} />
+      <Route path={"/signup"} component={Signup} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

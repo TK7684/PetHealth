@@ -1,11 +1,10 @@
 import type { User } from "../../drizzle/schema";
 import type { TrpcContext } from "./context";
-import { sdk } from "./sdk";
+import { authenticateRequest } from "./auth";
 
 // Create Express-like request/response objects for Workers compatibility
 function createExpressLikeReq(request: Request) {
   const url = new URL(request.url);
-  
   return {
     headers: {
       cookie: request.headers.get("cookie") || undefined,
@@ -21,7 +20,6 @@ function createExpressLikeReq(request: Request) {
 function createExpressLikeRes() {
   const headers = new Headers();
   const cookies: string[] = [];
-  
   return {
     cookie: (name: string, value: string, options: any = {}) => {
       const parts = [`${name}=${value}`];
@@ -42,32 +40,20 @@ function createExpressLikeRes() {
       cookies.push(parts.join("; "));
     },
     getHeader: (name: string) => headers.get(name),
-    setHeader: (name: string, value: string) => {
-      headers.set(name, value);
-    },
+    setHeader: (name: string, value: string) => headers.set(name, value),
     _cookies: cookies,
     _headers: headers,
   } as any;
 }
 
-export async function createWorkersContext(
-  request: Request
-): Promise<TrpcContext> {
+export async function createWorkersContext(request: Request): Promise<TrpcContext> {
   let user: User | null = null;
   const expressLikeReq = createExpressLikeReq(request);
   const expressLikeRes = createExpressLikeRes();
-
   try {
-    user = await sdk.authenticateRequest(expressLikeReq);
-  } catch (error) {
-    // Authentication is optional for public procedures.
+    user = await authenticateRequest(expressLikeReq);
+  } catch {
     user = null;
   }
-
-  return {
-    req: expressLikeReq,
-    res: expressLikeRes,
-    user,
-  };
+  return { req: expressLikeReq, res: expressLikeRes, user };
 }
-
