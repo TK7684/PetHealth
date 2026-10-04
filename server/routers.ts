@@ -11,6 +11,7 @@ import {
   createSessionToken,
 } from "./_core/auth";
 import { NotificationService } from "./notifications";
+import { invokeLLM, type Message } from "./_core/llm";
 
 export const appRouter = router({
   system: systemRouter,
@@ -905,6 +906,69 @@ export const appRouter = router({
             message: "Failed to send test notifications",
           });
         }
+      }),
+  }),
+
+  // AI assistant procedures — activates the dormant server/_core/llm.ts client.
+  // Conditional seam (pattern: dead-code activation): degrades gracefully when
+  // the LLM API key is not configured, preserving absent-key behavior.
+  ai: router({
+    dailySummary: protectedProcedure
+      .input(
+        z.object({
+          petId: z.number(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const { ENV } = await import("./_core/env");
+        if (!ENV.forgeApiKey) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "AI features are not configured (missing API key)",
+          });
+        }
+
+        const [healthRecords, weightRecords] = await Promise.all([
+          db.getHealthRecords(input.petId),
+          db.getWeightRecords(input.petId),
+        ]);
+
+        const recentHealth = healthRecords
+          .slice(0, 10)
+          .map(r => `${r.date ?? "unknown date"}: ${r.recordType ?? "record"}${r.notes ? ` — ${r.notes}` : ""}`)
+          .join("\n") || "No recent health records.";
+
+        const recentWeights = weightRecords
+          .slice(0, 10)
+          .map(r => `${r.date ?? "unknown date"}: ${r.weight} ${r.unit}`)
+          .join("\n") || "No recent weight records.";
+
+        const messages: Message[] = [
+          {
+            role: "system",
+            content:
+              "You are a veterinary assistant. Summarize the pet's recent health data in 3 short bullet points. Note any concerning trends (weight change, recurring symptoms). Never diagnose; recommend a vet visit when unsure. Reply in the user's language.",
+          },
+          {
+            role: "user",
+            content: `Recent health records:\n${recentHealth}\n\nRecent weight records:\n${recentWeights}`,
+          },
+        ];
+
+        const result = await invokeLLM({
+          messages,
+          maxTokens: 1024,
+        });
+
+        const summary =
+          result.choices?.[0]?.message?.content;
+        const text = typeof summary === "string"
+          ? summary
+          : Array.isArray(summary)
+            ? summary.map(part => (part.type === "text" ? part.text : "")).join("\n")
+            : "";
+
+        return { summary: text.trim(), generatedAt: new Date().toISOString() };
       }),
   }),
 });
