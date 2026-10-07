@@ -12,6 +12,7 @@ import {
 } from "./_core/auth";
 import { NotificationService } from "./notifications";
 import { invokeLLM, type Message } from "./_core/llm";
+import { transcribeAudio } from "./_core/voiceTranscription";
 
 export const appRouter = router({
   system: systemRouter,
@@ -969,6 +970,40 @@ export const appRouter = router({
             : "";
 
         return { summary: text.trim(), generatedAt: new Date().toISOString() };
+      }),
+  }),
+  // Voice transcription — activates the dormant server/_core/voiceTranscription.ts
+  // Whisper client (pattern: dead-code activation, same shape as the ai router).
+  // Conditional seam: degrades gracefully when the API key is not configured.
+  voice: router({
+    transcribe: protectedProcedure
+      .input(
+        z.object({
+          audioUrl: z.string().url(),
+          language: z.string().optional(),
+          prompt: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { ENV } = await import("./_core/env");
+        if (!ENV.forgeApiKey) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Voice transcription is not configured (missing API key)",
+          });
+        }
+
+        const result = await transcribeAudio(input);
+
+        if ("error" in result) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: result.error,
+            cause: result,
+          });
+        }
+
+        return result;
       }),
   }),
 });
