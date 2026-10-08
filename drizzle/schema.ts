@@ -206,3 +206,35 @@ export const dailyActivities = sqliteTable("daily_activities", {
 
 export type DailyActivity = typeof dailyActivities.$inferSelect;
 export type InsertDailyActivity = typeof dailyActivities.$inferInsert;
+
+/** Memos — free-text capture (voice, typed, photo-attached) */
+export const memos = sqliteTable("memos", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  content: text("content").notNull(),
+  source: text("source", { enum: ["manual", "voice", "photo"] }).default("manual").notNull(),
+  memoDate: integer("memoDate", { mode: "timestamp" }).notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type Memo = typeof memos.$inferSelect;
+export type InsertMemo = typeof memos.$inferInsert;
+
+/** AI insights — digests, cluster alerts, persisted with status */
+export const aiInsights = sqliteTable("ai_insights", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  petId: integer("petId").notNull(),
+  type: text("type").notNull(), // daily_digest | cluster_alert | chat_log | baseline_summary
+  severity: text("severity", { enum: ["info", "green", "amber", "red"] }).default("info").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  evidenceJson: text("evidenceJson"),
+  status: text("status", { enum: ["new", "acknowledged", "dismissed"] }).default("new").notNull(),
+  insightDate: integer("insightDate", { mode: "timestamp" }).notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type AiInsight = typeof aiInsights.$inferSelect;
+export type InsertAiInsight = typeof aiInsights.$inferInsert;

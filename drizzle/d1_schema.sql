@@ -165,3 +165,34 @@ CREATE TABLE IF NOT EXISTS daily_activities (
   updatedAt INTEGER NOT NULL DEFAULT (unixepoch())
 );
 CREATE INDEX IF NOT EXISTS idx_daily_activities_petId ON daily_activities(petId);
+
+-- ===== AI Health Intelligence layer (Phase 1-2) =====
+-- Free-text memos: capture everything (voice, typed, photo-attached)
+CREATE TABLE IF NOT EXISTS memos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  petId INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'manual',
+  memoDate INTEGER NOT NULL,
+  createdAt INTEGER NOT NULL DEFAULT (unixepoch()),
+  updatedAt INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_memos_petId ON memos(petId);
+CREATE INDEX IF NOT EXISTS idx_memos_memoDate ON memos(memoDate);
+
+-- AI-generated insights: digests, cluster alerts, chat logs persist here
+CREATE TABLE IF NOT EXISTS ai_insights (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  petId INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'info',
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  evidenceJson TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  insightDate INTEGER NOT NULL,
+  createdAt INTEGER NOT NULL DEFAULT (unixepoch()),
+  updatedAt INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_ai_insights_petId ON ai_insights(petId);
+CREATE INDEX IF NOT EXISTS idx_ai_insights_insightDate ON ai_insights(insightDate);

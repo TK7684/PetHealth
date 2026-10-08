@@ -11,6 +11,7 @@ import {
   createSessionToken,
 } from "./_core/auth";
 import { NotificationService } from "./notifications";
+import { callZaiFlash, buildPetContext } from "./_core/ai";
 import { invokeLLM, type Message } from "./_core/llm";
 import { transcribeAudio } from "./_core/voiceTranscription";
 

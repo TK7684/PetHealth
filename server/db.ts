@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import {
   users,
@@ -421,4 +421,51 @@ export async function deleteDailyActivity(id: number): Promise<void> {
   const db = getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(dailyActivities).where(eq(dailyActivities.id, id));
+}
+
+// ========== Memo Queries (AI Phase 1) ==========
+
+import { memos, aiInsights, type Memo, type InsertMemo, type AiInsight, type InsertAiInsight } from "../drizzle/schema";
+
+export async function getMemos(petId: number, sinceDays = 1): Promise<Memo[]> {
+  const db = getDb();
+  if (!db) return [];
+  const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+  return db.select().from(memos).where(and(eq(memos.petId, petId), gte(memos.memoDate, since))).orderBy(desc(memos.memoDate));
+}
+
+export async function createMemo(memo: InsertMemo): Promise<Memo> {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(memos).values(memo);
+  const result = await db.select().from(memos).orderBy(desc(memos.id)).limit(1);
+  return result[0]!;
+}
+
+export async function deleteMemo(id: number): Promise<void> {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(memos).where(eq(memos.id, id));
+}
+
+// ========== AI Insight Queries (AI Phase 1-2) ==========
+
+export async function getAiInsights(petId: number, limit = 30): Promise<AiInsight[]> {
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(aiInsights).where(eq(aiInsights.petId, petId)).orderBy(desc(aiInsights.insightDate)).limit(limit);
+}
+
+export async function createAiInsight(insight: InsertAiInsight): Promise<AiInsight> {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(aiInsights).values(insight);
+  const result = await db.select().from(aiInsights).orderBy(desc(aiInsights.id)).limit(1);
+  return result[0]!;
+}
+
+export async function updateAiInsightStatus(id: number, status: "new" | "acknowledged" | "dismissed"): Promise<void> {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(aiInsights).set({ status, updatedAt: new Date() }).where(eq(aiInsights.id, id));
 }
