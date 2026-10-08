@@ -30,6 +30,7 @@ import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { trpc } from "@/lib/trpc";
 import { useI18n } from "@/contexts/I18nContext";
+import AiHealthPanel from "@/components/AiHealthPanel";
 
 interface PetProfileProps {
   params: { id: string };
@@ -359,6 +360,9 @@ export default function PetProfile({ params }: PetProfileProps) {
             </Card>
           </Link>
         </div>
+
+        {/* AI Health Intelligence — memos, digest, cluster alerts, chat */}
+        <AiHealthPanel petId={pet.id} />
       </div>
     </DashboardLayout>
   );

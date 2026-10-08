@@ -59,14 +59,18 @@ export async function callZaiFlash(
         body: JSON.stringify({
           model: "glm-4.5-flash",
           messages,
-          max_tokens: opts.maxTokens ?? 800,
+          max_tokens: opts.maxTokens ?? 1200,
           temperature: opts.temperature ?? 0.4,
         }),
         signal: AbortSignal.timeout(30_000),
       });
       if (res.ok) {
         const data: any = await res.json();
-        const text = data?.choices?.[0]?.message?.content;
+        const choice = data?.choices?.[0];
+        const msg = choice?.message;
+        // glm-4.5-flash is a reasoning model: content may be empty with the
+        // answer in reasoning_content when max_tokens is exhausted by thinking
+        const text = (msg?.content && String(msg.content).trim()) || (msg?.reasoning_content && String(msg.reasoning_content).trim()) || "";
         if (text) return { text, provider: "zai" };
       }
       console.warn(`[AI] ZAI failed (${res.status}), falling back to Ollama`);
@@ -84,7 +88,7 @@ export async function callZaiFlash(
       model: "llama3.2:3b",
       messages,
       stream: false,
-      options: { temperature: opts.temperature ?? 0.4, num_predict: opts.maxTokens ?? 800 },
+      options: { temperature: opts.temperature ?? 0.4, num_predict: opts.maxTokens ?? 1200 },
     }),
     signal: AbortSignal.timeout(60_000),
   });

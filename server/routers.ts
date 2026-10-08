@@ -11,7 +11,7 @@ import {
   createSessionToken,
 } from "./_core/auth";
 import { NotificationService } from "./notifications";
-import { callZaiFlash, buildPetContext } from "./_core/ai";
+import { callZaiFlash, buildPetContext, buildDigestPrompt, buildClusterPrompt, checkErTriage, ER_MESSAGE } from "./_core/ai";
 import { invokeLLM, type Message } from "./_core/llm";
 import { transcribeAudio } from "./_core/voiceTranscription";
 
@@ -1005,6 +1005,222 @@ export const appRouter = router({
         }
 
         return result;
+      }),
+  }),
+
+  // ===== AI Health Intelligence (Phases 1-3) =====
+
+  // Memos — capture everything
+  memos: router({
+    list: protectedProcedure
+      .input(z.object({ petId: z.number(), sinceDays: z.number().default(30) }))
+      .query(async ({ input }) => db.getMemos(input.petId, input.sinceDays)),
+
+    create: protectedProcedure
+      .input(
+        z.object({
+          petId: z.number(),
+          content: z.string().min(1).max(5000),
+          source: z.enum(["manual", "voice", "photo"]).default("manual"),
+          memoDate: z.date().default(() => new Date()),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const pet = await db.getPetById(input.petId, ctx.user.id);
+        if (!pet) throw new TRPCError({ code: "NOT_FOUND", message: "Pet not found" });
+        const { petId, content, source, memoDate } = input;
+        return db.createMemo({ petId, content, source, memoDate });
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ memoId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteMemo(input.memoId);
+        return { success: true };
+      }),
+  }),
+
+  // AI Health Intelligence — digests + cluster alerts + chat (Phases 1-3)
+  intelligence: router({
+    insights: protectedProcedure
+      .input(z.object({ petId: z.number(), limit: z.number().default(30) }))
+      .query(async ({ input }) => db.getAiInsights(input.petId, input.limit)),
+
+    setStatus: protectedProcedure
+      .input(z.object({ insightId: z.number(), status: z.enum(["new", "acknowledged", "dismissed"]) }))
+      .mutation(async ({ input }) => {
+        await db.updateAiInsightStatus(input.insightId, input.status);
+        return { success: true };
+      }),
+
+    // Phase 1: nightly digest — on-demand regeneration
+    digest: protectedProcedure
+      .input(z.object({ petId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const pet = await db.getPetById(input.petId, ctx.user.id);
+        if (!pet) throw new TRPCError({ code: "NOT_FOUND", message: "Pet not found" });
+
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const [activities, memos, weights, feedings] = await Promise.all([
+          db.getDailyActivities(input.petId),
+          db.getMemos(input.petId, 1),
+          db.getWeightRecords(input.petId),
+          db.getFeedingSchedules(input.petId),
+        ]);
+
+        const today = (d: Date) => new Date(d).getTime() >= since.getTime();
+        const dayParts: string[] = [];
+        const todayActs = activities.filter(a => today(a.date));
+        if (todayActs.length) {
+          dayParts.push(`กิจกรรม: ${todayActs.map(a => `${a.activityType}${a.duration ? ` ${a.duration}นาที` : ""}`).join(", ")}`);
+        } else {
+          dayParts.push("กิจกรรม: ไม่มีบันทึกวันนี้");
+        }
+        if (memos.length) dayParts.push(`บันทึก: ${memos.map(m => m.content.slice(0, 80)).join(" | ")}`);
+        const todayWeights = weights.filter(w => today(w.date));
+        if (todayWeights.length) dayParts.push(`น้ำหนักวันนี้: ${todayWeights[0].weight}kg`);
+        if (feedings.length) dayParts.push(`ตารางอาหาร: ${feedings.map(f => `${f.foodType} ${f.time ?? ""}`).join(", ")}`);
+
+        const ctxData = buildPetContext({ pet });
+        const { text, provider } = await callZaiFlash(buildDigestPrompt(ctxData, dayParts.join("\n")), { maxTokens: 1500 });
+
+        const insight = await db.createAiInsight({
+          petId: input.petId,
+          type: "daily_digest",
+          severity: "info",
+          title: `สรุปสุขภาพวันนี้ — ${new Date().toLocaleDateString("th-TH")}`,
+          body: text,
+          evidenceJson: JSON.stringify({ activities: todayActs.length, memos: memos.length, provider }),
+          insightDate: new Date(),
+        });
+
+        return { insight, provider };
+      }),
+
+    // Phase 3: profile-aware chat with ER-triage guardrails
+    chat: protectedProcedure
+      .input(
+        z.object({
+          petId: z.number(),
+          message: z.string().min(1).max(2000),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const pet = await db.getPetById(input.petId, ctx.user.id);
+        if (!pet) throw new TRPCError({ code: "NOT_FOUND", message: "Pet not found" });
+
+        // ER triage check FIRST — never AI-answer emergencies
+        const erKeyword = checkErTriage(input.message);
+        if (erKeyword) {
+          return { reply: ER_MESSAGE, emergency: true, keyword: erKeyword };
+        }
+
+        const [weights, activities, memos, healthRecords, vaccinations, medications, feedings] = await Promise.all([
+          db.getWeightRecords(input.petId),
+          db.getDailyActivities(input.petId),
+          db.getMemos(input.petId, 30),
+          db.getHealthRecords(input.petId),
+          db.getVaccinations(input.petId),
+          db.getMedications(input.petId),
+          db.getFeedingSchedules(input.petId),
+        ]);
+
+        const ctxData = buildPetContext({
+          pet,
+          recentWeights: weights.slice(0, 5).map(w => ({ date: w.date, weight: w.weight })),
+          recentActivities: activities.slice(0, 5).map(a => ({ date: a.date, activityType: a.activityType, duration: a.duration })),
+          recentMemos: memos.slice(0, 5).map(m => ({ memoDate: m.memoDate, content: m.content })),
+          recentHealthRecords: healthRecords.slice(0, 3).map(h => ({ date: h.date, recordType: h.recordType, notes: h.notes })),
+          upcomingVaccinations: vaccinations.map(v => ({ vaccineName: v.vaccineName, nextDate: v.nextDate })),
+          upcomingMedications: medications.map(m => ({ medicationName: m.medicationName, nextDueDate: m.nextDueDate })),
+          feedingSchedules: feedings.map(f => ({ foodType: f.foodType, time: f.time, frequency: f.frequency })),
+        });
+
+        const { text, provider } = await callZaiFlash(
+          [
+            { role: "system", content: ctxData },
+            { role: "user", content: input.message },
+          ],
+          { maxTokens: 2000 }
+        );
+
+        return { reply: text, emergency: false, provider };
+      }),
+
+    // Phase 2: cluster analysis — deterministic rules first, AI writes the alert
+    analyzeCluster: protectedProcedure
+      .input(z.object({ petId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const pet = await db.getPetById(input.petId, ctx.user.id);
+        if (!pet) throw new TRPCError({ code: "NOT_FOUND", message: "Pet not found" });
+
+        const [activities, weights, memos, behaviorLogs, sickCare] = await Promise.all([
+          db.getDailyActivities(input.petId),
+          db.getWeightRecords(input.petId),
+          db.getMemos(input.petId, 7),
+          db.getBehaviorLogs(input.petId),
+          db.getSickCareLogs(input.petId),
+        ]);
+
+        // ===== Deterministic baseline rules (maker) =====
+        const now = Date.now();
+        const daysAgo = (n: number) => now - n * 24 * 60 * 60 * 1000;
+        const anomalies: string[] = [];
+
+        // Rule 1: activity decline ≥50% vs 7-day window (≥3 days)
+        const acts7 = activities.filter(a => new Date(a.date).getTime() >= daysAgo(7));
+        const acts3 = activities.filter(a => new Date(a.date).getTime() >= daysAgo(3));
+        const dur7 = acts7.reduce((s, a) => s + (a.duration ?? 0), 0);
+        const dur3 = acts3.reduce((s, a) => s + (a.duration ?? 0), 0);
+        if (dur7 > 0 && dur3 / 3 < dur7 / 7 * 0.5) {
+          anomalies.push(`กิจกรรมลดลงชัดเจนใน 3 วันล่าสุด (เฉลี่ย ${Math.round(dur3 / 3)} นาที/วัน จากปกติ ${Math.round(dur7 / 7)} นาที/วัน)`);
+        }
+
+        // Rule 2: weight slope > ±3% in 30 days
+        if (weights.length >= 2) {
+          const latest = weights[0];
+          const oldest = weights[weights.length - 1];
+          const days = (new Date(latest.date).getTime() - new Date(oldest.date).getTime()) / (24 * 60 * 60 * 1000);
+          if (days >= 14) {
+            const pctChange = ((latest.weight - oldest.weight) / oldest.weight) * 100;
+            if (Math.abs(pctChange) > 3) {
+              anomalies.push(`น้ำหนัก${pctChange > 0 ? "เพิ่ม" : "ลด"} ${Math.abs(pctChange).toFixed(1)}% ใน ${Math.round(days)} วัน (${oldest.weight}→${latest.weight}kg)`);
+            }
+          }
+        }
+
+        // Rule 3: behavior logs in last 3 days
+        const recentBehavior = behaviorLogs.filter(b => new Date(b.date).getTime() >= daysAgo(3));
+        if (recentBehavior.length >= 2) {
+          anomalies.push(`พฤติกรรมผิดปกติบันทึก ${recentBehavior.length} ครั้งใน 3 วัน: ${recentBehavior.slice(0, 3).map(b => b.behaviorType).join(", ")}`);
+        }
+
+        // Rule 4: ongoing sick care
+        const ongoing = sickCare.filter(s => s.status === "ongoing");
+        if (ongoing.length) {
+          anomalies.push(`มีบันทึกการดูแลขณะป่วยที่ยังไม่จบ: ${ongoing.map(s => s.symptoms.slice(0, 50)).join(", ")}`);
+        }
+
+        // Cluster gate: need ≥2 anomalies to fire (evidence law: ≥3 metrics = 81% correlation, we approximate with 2+ sources)
+        if (anomalies.length < 2) {
+          return { cluster: false, anomalies, message: "ไม่พบรูปแบบความผิดปกติแบบ cluster" };
+        }
+
+        // ===== AI writes the alert (different lens, same data) =====
+        const ctxData = buildPetContext({ pet });
+        const { text, provider } = await callZaiFlash(buildClusterPrompt(ctxData, anomalies.join("\n")), { maxTokens: 1500 });
+
+        const insight = await db.createAiInsight({
+          petId: input.petId,
+          type: "cluster_alert",
+          severity: anomalies.length >= 3 ? "amber" : "info",
+          title: `ตรวจพบรูปแบบความผิดปกติ ${anomalies.length} จุด`,
+          body: text,
+          evidenceJson: JSON.stringify({ anomalies, provider }),
+          insightDate: new Date(),
+        });
+
+        return { cluster: true, anomalies, insight, provider };
       }),
   }),
 });
