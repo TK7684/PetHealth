@@ -112,3 +112,4 @@ workers/index.js
 
 # Environment files
 .env.example
+.local-data/
