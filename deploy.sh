@@ -7,7 +7,7 @@ echo "════════════════════════�
 
 # Step 0: Check wrangler auth
 echo ""
-echo "[0/5] Checking Cloudflare authentication..."
+echo "[0/6] Checking Cloudflare authentication..."
 if ! npx wrangler whoami >/dev/null 2>&1; then
   echo "❌ Not authenticated with Cloudflare."
   echo "   Run: npx wrangler login"
@@ -18,7 +18,7 @@ echo "✅ Authenticated"
 
 # Step 1: Create D1 database (if not exists)
 echo ""
-echo "[1/5] Setting up D1 database..."
+echo "[1/6] Setting up D1 database..."
 DB_ID=$(npx wrangler d1 list 2>/dev/null | grep "pethealth-db" | awk '{print $NF}' || echo "")
 
 if [ -z "$DB_ID" ]; then
@@ -48,13 +48,21 @@ fi
 
 # Step 2: Initialize database schema
 echo ""
-echo "[2/5] Applying D1 schema..."
+echo "[2/6] Applying D1 schema..."
 npx wrangler d1 execute pethealth-db --file=./drizzle/d1_schema.sql
 echo "✅ Schema applied"
 
+# Step 2b: Seed TK + Luca (only if seed file exists)
+if [ -f ./drizzle/seed_tk_luca.sql ]; then
+  echo ""
+  echo "[2b/6] Seeding TK + Luca..."
+  npx wrangler d1 execute pethealth-db --file=./drizzle/seed_tk_luca.sql
+  echo "✅ Seeded (TK admin + Luca the dog)"
+fi
+
 # Step 3: Set required secrets
 echo ""
-echo "[3/5] Checking secrets..."
+echo "[3/6] Checking secrets..."
 
 # JWT_SECRET — generate if not set
 if ! npx wrangler secret list 2>/dev/null | grep -q "JWT_SECRET"; then
@@ -67,13 +75,13 @@ fi
 
 # Step 4: Build
 echo ""
-echo "[4/5] Building frontend + workers bundle..."
+echo "[4/6] Building frontend + workers bundle..."
 npm run build:workers
 echo "✅ Build complete"
 
 # Step 5: Deploy
 echo ""
-echo "[5/5] Deploying to Cloudflare Workers..."
+echo "[5/6] Deploying to Cloudflare Workers..."
 npx wrangler deploy --no-bundle
 
 echo ""
