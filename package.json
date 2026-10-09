@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch server/_core/index.ts",
     "build": "cross-env NODE_ENV=production vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "build:workers": "cross-env NODE_ENV=production vite build && node esbuild.workers.config.js && cp workers/index.js dist/public/_worker.js",
+    "build:workers": "cross-env NODE_ENV=production vite build && node esbuild.workers.config.js && esbuild workers/index.js --banner:js=\"globalThis.process=globalThis.process||{env:{}};\" --outdir=/tmp/phase-out && cp /tmp/phase-out/index.js workers/index.js && cp workers/index.js dist/public/_worker.js",
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
