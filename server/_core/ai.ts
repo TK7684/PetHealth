@@ -32,8 +32,8 @@ export const ER_MESSAGE = `🚨 อาการที่คุณบอกอา
 
 function getZaiKey(): string | null {
   try {
-    // Workers: secret binding; Node: env
-    const env = (globalThis as any)?.process?.env ?? {};
+    // Workers: runtime env (set via setRuntimeEnv); Node: process.env
+    const env = { ...((globalThis as any)?.process?.env ?? {}), ..._runtimeEnv };
     return env.GLM_API_KEY || env.ZAI_API_KEY || null;
   } catch {
     return null;
@@ -173,4 +173,10 @@ export function buildClusterPrompt(ctx: string, evidence: string): AiMessage[] {
     { role: "system", content: `${ctx}\n\nตอนนี้ระบบตรวจพบความผิดปกติหลายอย่างพร้อมกัน (cluster) เขียนแจ้งเตือนภาษาไทย: สิ่งที่สังเกตเห็น, อาจเกี่ยวกับอะไรบ้าง (ให้ความรู้ ไม่วินิจฉัย), ควรสังเกตอะไรต่อ, เมื่อไรควรพบสัตวแพทย์ จำกัด 5 bullets` },
     { role: "user", content: `หลักฐานความผิดปกติ:\n${evidence}\n\nเขียนแจ้งเตือน:` },
   ];
+}
+
+/** Runtime env from the worker request — secrets live here, not process.env */
+let _runtimeEnv: Record<string, string | undefined> = {};
+export function setRuntimeEnv(env: Record<string, unknown>) {
+  _runtimeEnv = env as Record<string, string | undefined>;
 }

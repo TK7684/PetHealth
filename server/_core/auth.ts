@@ -64,7 +64,8 @@ export type SessionPayload = {
 };
 
 function getSessionSecret(): Uint8Array {
-  const secret = process.env.JWT_SECRET || "dev-secret-change-in-production";
+  const runtime = (globalThis as any).__pethealthEnv ?? {};
+  const secret = process.env.JWT_SECRET || runtime.JWT_SECRET || "dev-secret-change-in-production";
   return encoder.encode(secret);
 }
 

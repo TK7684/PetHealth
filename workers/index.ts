@@ -4,6 +4,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "../server/routers";
 import { createWorkersContext } from "../server/_core/workers-context";
 import { setDatabase } from "../server/db";
+import { setRuntimeEnv } from "../server/_core/ai";
 
 export interface Env {
   DB: D1Database;
@@ -18,6 +19,9 @@ export default {
     if (env.DB) {
       setDatabase(env.DB);
     }
+    // Thread runtime secrets (GLM_API_KEY, JWT_SECRET) into the app layer
+    (globalThis as any).__pethealthEnv = env;
+    setRuntimeEnv(env as unknown as Record<string, unknown>);
 
     const url = new URL(request.url);
 
@@ -58,6 +62,15 @@ export default {
           headers: { "Content-Type": "application/json" },
         });
       }
+    }
+
+    // Debug: which env bindings exist (names only, never values)
+    if (url.pathname === "/api/debug-env") {
+      const names = Object.keys(env ?? {}).filter(k => k !== "ASSETS");
+      return new Response(JSON.stringify({ bindings: names, hasProcessEnv: typeof (globalThis as any).process !== "undefined", processEnvKeys: typeof (globalThis as any).process !== "undefined" ? Object.keys((globalThis as any).process.env ?? {}).slice(0, 20) : null }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Stripe webhook (post-MVP)
