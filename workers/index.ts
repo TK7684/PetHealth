@@ -24,15 +24,32 @@ export default {
     // Handle tRPC API requests
     if (url.pathname.startsWith("/api/trpc")) {
       try {
+        let ctxResult: { res?: { _cookies?: string[] } } | null = null;
         const response = await fetchRequestHandler({
           endpoint: "/api/trpc",
           req: request,
           router: appRouter,
-          createContext: async () => createWorkersContext(request),
+          createContext: async () => {
+            const ctx = await createWorkersContext(request);
+            ctxResult = ctx as any;
+            return ctx;
+          },
           onError: ({ error, path }) => {
             console.error(`tRPC error on '${path}':`, error);
           },
         });
+        // Pages/tRPC adapters drop ctx.res.cookie() calls — re-attach the
+        // collected Set-Cookie headers here (login/logout/register set them).
+        const cookies = (ctxResult as any)?.res?._cookies ?? [];
+        if (cookies.length > 0) {
+          const headers = new Headers(response.headers);
+          for (const c of cookies) headers.append("Set-Cookie", c);
+          return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
+          });
+        }
         return response as Response;
       } catch (err) {
         console.error("tRPC handler error:", err);
