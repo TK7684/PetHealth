@@ -3,20 +3,28 @@ import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
 import type { AppRouter } from "../../../server/routers";
 
+// API base: same-origin by default; override for the pedpro.online subpath
+// build where the API lives on pethealth.pages.dev (cross-origin — cookies
+// are SameSite=None; Secure so they still flow with credentials:include).
+export const API_URL = import.meta.env.VITE_API_URL || "/api/trpc";
+
 export const trpc = createTRPCReact<AppRouter>();
 
-// Vanilla tRPC client for use in non-React contexts (e.g., queryFn)
+function withCredentials(input: RequestInfo | URL, init?: RequestInit) {
+  return globalThis.fetch(input, {
+    ...(init ?? {}),
+    credentials: "include",
+  });
+}
+
 export const api = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: API_URL,
       transformer: superjson,
-      fetch(input, init) {
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: "include",
-        });
-      },
+      fetch: withCredentials,
     }),
   ],
 });
+
+export { withCredentials };

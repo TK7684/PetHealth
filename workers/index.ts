@@ -27,6 +27,21 @@ export default {
 
     // Handle tRPC API requests
     if (url.pathname.startsWith("/api/trpc")) {
+      // CORS preflight
+      const origin = request.headers.get("Origin") ?? "";
+      const allowedOrigins = ["https://pedpro.online", "https://www.pedpro.online", "https://pethealth.pages.dev"];
+      if (request.method === "OPTIONS" && allowedOrigins.includes(origin)) {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, trpc-accept",
+            "Access-Control-Max-Age": "86400",
+          },
+        });
+      }
       try {
         let ctxResult: { res?: { _cookies?: string[] } } | null = null;
         const response = await fetchRequestHandler({
@@ -45,6 +60,20 @@ export default {
         // Pages/tRPC adapters drop ctx.res.cookie() calls — re-attach the
         // collected Set-Cookie headers here (login/logout/register set them).
         const cookies = (ctxResult as any)?.res?._cookies ?? [];
+        const origin = request.headers.get("Origin") ?? "";
+        const allowedOrigins = ["https://pedpro.online", "https://www.pedpro.online", "https://pethealth.pages.dev"];
+        if (allowedOrigins.includes(origin)) {
+          const headers = new Headers(response.headers);
+          headers.set("Access-Control-Allow-Origin", origin);
+          headers.set("Access-Control-Allow-Credentials", "true");
+          headers.set("Vary", "Origin");
+          for (const c of cookies) headers.append("Set-Cookie", c);
+          return new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
+          });
+        }
         if (cookies.length > 0) {
           const headers = new Headers(response.headers);
           for (const c of cookies) headers.append("Set-Cookie", c);
