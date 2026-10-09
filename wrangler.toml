@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "pethealth-db"
-database_id = "PLACEHOLDER_RUN_WRANGLER_D1_CREATE"
+database_id = "3e4b1b77-c77d-477c-834d-d28b75204710"
 
 # Static assets — the built frontend from dist/public
 [assets]
