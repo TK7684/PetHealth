@@ -4,3 +4,4 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 [vars]
 NODE_ENV = "production"
+JWT_SECRET = "pethealth-jwt-7f4e9c2b1a8d5e3f6c0b9a2d4e8f1c3b"
