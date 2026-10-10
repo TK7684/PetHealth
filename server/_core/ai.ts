@@ -59,6 +59,10 @@ export async function callZaiFlash(
         body: JSON.stringify({
           model: "glm-4.5-flash",
           messages,
+          // ponytail: flash tier with default thinking burns the whole 30s timeout on
+          // reasoning_content → every call degrades to Ollama. Disable thinking; if
+          // quality ever demands reasoning, switch to SSE streaming instead.
+          thinking: { type: "disabled" },
           max_tokens: opts.maxTokens ?? 1200,
           temperature: opts.temperature ?? 0.4,
         }),

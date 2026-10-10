@@ -10,7 +10,7 @@
  */
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { eq, desc, gte } from "drizzle-orm";
+import { eq, desc, gte, and, ne } from "drizzle-orm";
 import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import path from "node:path";
 import {
@@ -62,7 +62,7 @@ async function main() {
     const latest = await db
       .select()
       .from(aiInsights)
-      .where(eq(aiInsights.petId, pet.id))
+      .where(and(eq(aiInsights.petId, pet.id), ne(aiInsights.status, "superseded")))
       .orderBy(desc(aiInsights.insightDate))
       .limit(1);
     if (latest[0] && latest[0].type === "daily_digest" && inWindow(latest[0].insightDate)) {

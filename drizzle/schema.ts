@@ -230,7 +230,7 @@ export const aiInsights = sqliteTable("ai_insights", {
   title: text("title").notNull(),
   body: text("body").notNull(),
   evidenceJson: text("evidenceJson"),
-  status: text("status", { enum: ["new", "acknowledged", "dismissed"] }).default("new").notNull(),
+  status: text("status", { enum: ["new", "acknowledged", "dismissed", "superseded"] }).default("new").notNull(),
   insightDate: integer("insightDate", { mode: "timestamp" }).notNull(),
   createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
