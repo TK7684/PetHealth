@@ -56,6 +56,11 @@ async function main() {
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const inWindow = (d: Date | null) => d !== null && new Date(d).getTime() >= since.getTime();
+  // Daily digest dedupe must be by ICT calendar day, not a sliding 24h window:
+  // this cron runs at 21:00 nightly, so yesterday's digest is ~23.9h old at run
+  // time and a 24h window would skip every other night.
+  const ictDay = (d: Date | null) =>
+    d === null ? null : new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Bangkok" }).format(new Date(d));
 
   for (const pet of allPets) {
     // Dedupe: skip if a digest for this pet already exists today
@@ -65,7 +70,7 @@ async function main() {
       .where(and(eq(aiInsights.petId, pet.id), ne(aiInsights.status, "superseded")))
       .orderBy(desc(aiInsights.insightDate))
       .limit(1);
-    if (latest[0] && latest[0].type === "daily_digest" && inWindow(latest[0].insightDate)) {
+    if (latest[0] && latest[0].type === "daily_digest" && ictDay(latest[0].insightDate) === ictDay(new Date())) {
       console.log(`[digest] ${pet.name}: today's digest already exists (id ${latest[0].id}) — skipping`);
       continue;
     }
