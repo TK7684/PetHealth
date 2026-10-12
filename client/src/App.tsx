@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { I18nProvider } from "./contexts/I18nContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -24,8 +24,11 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 
 function Router() {
+  // wouter base: /pet-health in the subpath build, "" on pethealth.pages.dev
+  const base = import.meta.env.BASE_URL.replace(/\/+$/, "");
   return (
-    <Switch>
+    <WouterRouter base={base}>
+      <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/pets"} component={Pets} />
       <Route path={"/health-records"} component={HealthRecords} />
@@ -44,7 +47,8 @@ function Router() {
       <Route path={"/signup"} component={Signup} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </WouterRouter>
   );
 }
 
