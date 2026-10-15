@@ -1,2 +1,4 @@
-/*    /index.html   200
+# SPA fallback — Workers assets mode rejects the bare `/*` splat (infinite-loop guard,
+# code 100324); not_found_handling = "single-page-application" in wrangler.toml already
+# serves index.html for unknown routes. Keep this file empty while on Workers deploy.
 

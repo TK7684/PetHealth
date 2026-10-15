@@ -20,7 +20,10 @@ import { useI18n } from "@/contexts/I18nContext";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
-const stripePromise = loadStripe(process.env.VITE_STRIPE_PUBLISHABLE_KEY || "");
+// TK 14/10: no publishable key on the free deploy — lazy-init so the app boots
+// clean (no "empty string" console error). Stripe loads only if a key exists.
+const STRIPE_KEY = process.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
+const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
 
 export default function Subscription() {
   const { t, lang } = useI18n();
