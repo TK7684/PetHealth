@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Plus, Trash2, CalendarIcon, Edit, Pill, HeartPulse, Crown, Activity, CheckCircle2, AlertTriangle } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -71,6 +71,13 @@ export default function SickCare() {
     queryKey: ["pets"],
     queryFn: () => api.pets.list.query(),
   });
+
+  // Auto-select when the account has exactly one pet
+  useEffect(() => {
+    if (!selectedPetId && pets && pets.length === 1) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
 
   const { data: logs, isLoading: logsLoading, error: logsError } = useQuery({
     queryKey: ["sickCareLogs", selectedPetId],

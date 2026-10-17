@@ -92,9 +92,12 @@ export default function PetProfile({ params }: PetProfileProps) {
   }
 
   const age = pet.birthDate
-    ? Math.floor(
-        (Date.now() - new Date(pet.birthDate).getTime()) /
-          (1000 * 60 * 60 * 24 * 365)
+    ? Math.max(
+        0,
+        Math.floor(
+          (Date.now() - new Date(pet.birthDate).getTime()) /
+            (1000 * 60 * 60 * 24 * 365)
+        )
       )
     : null;
 
@@ -145,9 +148,15 @@ export default function PetProfile({ params }: PetProfileProps) {
             )}
           </div>
 
-          <Link href={`/pets/${pet.id}/edit`}>
-            <Button variant="outline">{t.common.edit}</Button>
-          </Link>
+          <Button
+            variant="outline"
+            onClick={() => {
+              sessionStorage.setItem("pethealth.editPetId", String(pet.id));
+              window.location.href = "/pet-health/pets";
+            }}
+          >
+            {t.common.edit}
+          </Button>
         </div>
 
         <Separator />

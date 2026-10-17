@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Plus, Trash2, CalendarIcon, DollarSign, Receipt, TrendingUp, Crown } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
@@ -67,6 +67,13 @@ export default function Expenses() {
     queryKey: ["pets"],
     queryFn: () => api.pets.list.query(),
   });
+
+  // Auto-select when the account has exactly one pet
+  useEffect(() => {
+    if (!selectedPetId && pets && pets.length === 1) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
 
   const { data: expenses, isLoading: expensesLoading, error: expensesError } = useQuery({
     queryKey: ["expenses", selectedPetId],

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { PawPrint, Plus, Trash2, Edit } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { useI18n } from "@/contexts/I18nContext";
@@ -89,6 +89,17 @@ export default function Pets() {
     });
     setOpen(true);
   };
+
+  // Open edit dialog when arriving from PetProfile "edit" button
+  useEffect(() => {
+    const id = sessionStorage.getItem("pethealth.editPetId");
+    if (id && pets) {
+      const target = pets.find((p: any) => p.id === Number(id));
+      if (target) handleEdit(target);
+      sessionStorage.removeItem("pethealth.editPetId");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pets]);
 
   const handleDelete = (petId: number) => {
     if (confirm(t.pets.confirmDelete)) {
@@ -258,7 +269,13 @@ export default function Pets() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t.pets.gender}:</span>
-                      <span className="font-medium capitalize">{pet.gender}</span>
+                      <span className="font-medium">
+                        {pet.gender === "male"
+                          ? t.pets.male
+                          : pet.gender === "female"
+                            ? t.pets.female
+                            : t.pets.unknown}
+                      </span>
                     </div>
                     {pet.birthDate && (
                       <div className="flex justify-between">

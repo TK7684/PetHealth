@@ -91,7 +91,12 @@ export default function AiHealthPanel({ petId }: { petId: number }) {
         toast.error(th ? "ภาวะฉุกเฉิน — ไปโรงพยาบาลสัตวแพทย์ทันที" : "EMERGENCY — go to vet now");
       }
     },
-    onError: (e) => toast.error(e.message),
+    onError: () => {
+      // Never leak provider internals to pet owners; keep the user's message visible
+      toast.error(th
+        ? "AI ยังไม่พร้อมใช้งานขณะนี้ ลองใหม่ภายหลัง หรือปรึกษาสัตวแพทย์"
+        : "AI is unavailable right now — please try again later or contact your vet");
+    },
   });
 
   const handleSendChat = () => {

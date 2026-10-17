@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarIcon, FileText, Paperclip, Plus, Trash2 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { th, enUS } from "date-fns/locale";
@@ -53,6 +53,13 @@ export default function HealthRecords() {
     queryKey: ["pets"],
     queryFn: () => api.pets.list.query(),
   });
+
+  // Auto-select when the account has exactly one pet
+  useEffect(() => {
+    if (!selectedPetId && pets && pets.length === 1) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
 
   const { data: records, isLoading: recordsLoading } = useQuery({
     queryKey: ["healthRecords", selectedPetId],
@@ -238,7 +245,13 @@ export default function HealthRecords() {
           <CardHeader>
             <CardTitle>{lang === "th" ? "เลือกสัตว์เลี้ยง" : "Select a pet"}</CardTitle>
             <CardDescription>
-              {lang === "th" ? "กรุณาเลือกสัตว์เลี้ยงจากเมนูด้านบนเพื่อดูบันทึกสุขภาพ" : "Please select a pet from the menu above to view health records"}
+              {pets && pets.length === 0
+              ? (lang === "th"
+                ? "ยังไม่มีสัตว์เลี้ยง — เพิ่มสัตว์เลี้ยงก่อนเริ่มบันทึกสุขภาพ"
+                : "No pets yet — add a pet first to start health records")
+              : (lang === "th"
+                ? "กรุณาเลือกสัตว์เลี้ยงจากเมนูด้านบนเพื่อดูบันทึกสุขภาพ"
+                : "Please select a pet from the menu above to view health records")}
             </CardDescription>
           </CardHeader>
         </Card>

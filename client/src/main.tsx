@@ -33,6 +33,10 @@ queryClient.getQueryCache().subscribe(event => {
 });
 
 queryClient.getMutationCache().subscribe(event => {
+  if (event.type === "updated" && event.action.type === "success") {
+    // Any successful mutation refreshes visible data (fixes stale lists after save/delete)
+    queryClient.invalidateQueries();
+  }
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.mutation.state.error;
     redirectToLoginIfUnauthorized(error);

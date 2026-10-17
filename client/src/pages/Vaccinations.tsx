@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { CalendarIcon, Clock, Edit, Plus, Trash2, AlertCircle, Bell, BellOff } from "lucide-react";
 import { format, formatDistanceToNow, isAfter, addDays } from "date-fns";
 import { th, enUS } from "date-fns/locale";
@@ -42,6 +42,13 @@ export default function Vaccinations() {
     queryKey: ["pets"],
     queryFn: () => api.pets.list.query(),
   });
+
+  // Auto-select when the account has exactly one pet
+  useEffect(() => {
+    if (!selectedPetId && pets && pets.length === 1) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
 
   const { data: vaccinations, isLoading: vaccinationsLoading } = useQuery({
     queryKey: ["vaccinations", selectedPetId],

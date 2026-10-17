@@ -103,6 +103,10 @@ export const appRouter = router({
           photoUrl: z.string().optional(),
           gender: z.enum(["male", "female", "unknown"]).optional(),
         })
+        .refine((v) => !v.birthDate || new Date(v.birthDate) <= new Date(), {
+          message: "birthDate cannot be in the future",
+          path: ["birthDate"],
+        })
       )
       .mutation(async ({ ctx, input }) => {
         // Check tier limits
@@ -132,14 +136,19 @@ export const appRouter = router({
 
     update: protectedProcedure
       .input(
-        z.object({
-          petId: z.number(),
-          name: z.string().min(1).optional(),
-          breed: z.string().optional(),
-          birthDate: z.string().optional(),
-          photoUrl: z.string().optional(),
-          gender: z.enum(["male", "female", "unknown"]).optional(),
-        })
+        z
+          .object({
+            petId: z.number(),
+            name: z.string().min(1).optional(),
+            breed: z.string().optional(),
+            birthDate: z.string().optional(),
+            photoUrl: z.string().optional(),
+            gender: z.enum(["male", "female", "unknown"]).optional(),
+          })
+          .refine((v) => !v.birthDate || new Date(v.birthDate) <= new Date(), {
+            message: "birthDate cannot be in the future",
+            path: ["birthDate"],
+          })
       )
       .mutation(async ({ ctx, input }) => {
         const { petId, ...data } = input;

@@ -131,7 +131,7 @@ function DashboardLayoutContent({
   children,
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth({ redirectOnUnauthenticated: true });
   const { t } = useI18n();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();

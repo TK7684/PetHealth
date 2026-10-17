@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, Clock, Edit, UtensilsCrossed } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,13 @@ export default function FeedingSchedule() {
     queryKey: ["pets"],
     queryFn: () => api.pets.list.query(),
   });
+
+  // Auto-select when the account has exactly one pet
+  useEffect(() => {
+    if (!selectedPetId && pets && pets.length === 1) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
 
   const { data: schedules, isLoading: schedulesLoading } = useQuery({
     queryKey: ["feedingSchedules", selectedPetId],
