@@ -111,8 +111,29 @@ export default {
     }
 
     // Everything else: serve static assets via CF Assets binding
-    // This handles SPA routing (returns index.html for client-side routes)
     if (env.ASSETS) {
+      // html_handling = "none" on the project: no pretty-URL redirects, no
+      // auto directory-index — this worker owns all shell/route serving.
+      const serve = (path: string) =>
+        env.ASSETS!.fetch(new Request(new URL(path, url.origin), request));
+      // "/" serves the shell where directory-index exists (Pages default);
+      // "/index.html" serves raw where html_handling=none (Workers assets).
+      const serveShell = async () => {
+        let res = await serve("/");
+        if (res.status === 404) res = await serve("/index.html");
+        return res;
+      };
+
+      if (url.pathname === "/") return serveShell();
+      if (
+        url.pathname === "/pet-health" ||
+        (url.pathname.startsWith("/pet-health/") &&
+          !url.pathname.split("/").pop()?.includes("."))
+      ) {
+        // SPA client-side route — serve the app shell via the root document
+        // (auto-trailing-slash would 308 an explicit .html fetch)
+        return serveShell();
+      }
       return env.ASSETS.fetch(request);
     }
 

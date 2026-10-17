@@ -13,7 +13,8 @@ database_id = "3e4b1b77-c77d-477c-834d-d28b75204710"
 [assets]
 directory = "./dist/public"
 binding = "ASSETS"
-not_found_handling = "single-page-application"
+not_found_handling = "none"
+html_handling = "none"
 
 # Environment variables (non-sensitive)
 [vars]
