@@ -42,13 +42,45 @@ function getZaiKey(): string | null {
 
 export type AiMessage = { role: "system" | "user" | "assistant"; content: string };
 
+
+// ── Evidence gate at the release seam (AGI transfer 2026-11-23) ─────────────
+// Pattern proven in trading-agents + hermes (agi_system): route by realized
+// outcomes, not static priors, and place the gate where decisions are RELEASED.
+// callZaiFlash is the single seam for every released AI answer (chat replies,
+// nightly digests, cluster alerts). Without the ledger, a ZAI outage makes
+// every released answer stall up to 30s before failing open to Ollama.
+// Consecutive-failure breaker: >=4 failures in a row opens the circuit for
+// 60s (skip ZAI entirely -> fail-open to Ollama); after the cooldown a
+// half-open probe re-tries ZAI (recovery). Empty ledger -> legacy behavior.
+const ZAI_BREAKER_THRESHOLD = 4;
+const ZAI_BREAKER_COOLDOWN_MS = 60_000;
+let zaiConsecutiveFailures = 0;
+let zaiOpenUntil = 0;
+
+function zaiSkipByLedger(now: number = Date.now()): boolean {
+  return now < zaiOpenUntil;
+}
+
+function recordZaiOutcome(ok: boolean): void {
+  zaiConsecutiveFailures = ok ? 0 : zaiConsecutiveFailures + 1;
+  if (zaiConsecutiveFailures >= ZAI_BREAKER_THRESHOLD) {
+    zaiOpenUntil = Date.now() + ZAI_BREAKER_COOLDOWN_MS;
+  }
+}
+
+/** Test hook: reset breaker state between tests. */
+export function _resetZaiBreakerForTests(): void {
+  zaiConsecutiveFailures = 0;
+  zaiOpenUntil = 0;
+}
+
 /** Call ZAI glm-4.5-flash; failover to local llama3.2:3b on any failure. */
 export async function callZaiFlash(
   messages: AiMessage[],
   opts: { maxTokens?: number; temperature?: number } = {}
 ): Promise<{ text: string; provider: "zai" | "ollama" }> {
   const key = getZaiKey();
-  if (key) {
+  if (key && !zaiSkipByLedger()) {
     try {
       const res = await fetch(ZAI_API_URL, {
         method: "POST",
@@ -75,12 +107,18 @@ export async function callZaiFlash(
         // glm-4.5-flash is a reasoning model: content may be empty with the
         // answer in reasoning_content when max_tokens is exhausted by thinking
         const text = (msg?.content && String(msg.content).trim()) || (msg?.reasoning_content && String(msg.reasoning_content).trim()) || "";
-        if (text) return { text, provider: "zai" };
+        if (text) {
+          recordZaiOutcome(true);
+          return { text, provider: "zai" };
+        }
       }
       console.warn(`[AI] ZAI failed (${res.status}), falling back to Ollama`);
     } catch (err) {
       console.warn("[AI] ZAI error, falling back to Ollama:", String(err));
     }
+    recordZaiOutcome(false);
+  } else if (key) {
+    console.warn("[AI] ZAI skipped by evidence gate (recent failures) — fail-open to Ollama");
   }
 
   // Failover: local Ollama llama3.2:3b (FLEET endpoint, 0 baht cost)
